@@ -1,0 +1,18 @@
+{
+  "name": "cye-math-runner",
+  "version": "0.1.0",
+  "description": "CYE MATH RUNNER — SPM FINAL RUN: An endless runner with KSSM Form 5 Mathematics",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "validate": "node scripts/validate-questions.js"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CYE MATH RUNNER — SPM FINAL RUN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    html, body, #game-container {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #060918;
+      touch-action: none;
+      user-select: none;
+      font-family: 'Rajdhani', 'Orbitron', 'Segoe UI', sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <!-- Hidden preloader to force browser to cache glyphs before canvas render -->
+  <div style="font-family: 'Orbitron'; position: absolute; left: -9999px; visibility: hidden;">0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+  <div style="font-family: 'Rajdhani'; position: absolute; left: -9999px; visibility: hidden;">0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+  <div style="font-family: 'Fira Code'; position: absolute; left: -9999px; visibility: hidden;">0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ+-=×÷┌┐└┘|</div>
+
+  <div id="game-container"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

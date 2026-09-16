@@ -1,0 +1,82 @@
+[
+  {
+    "id": "boss-01",
+    "name": "Variation Viper",
+    "zone": 1,
+    "hp": 100,
+    "questionsToDefeat": 5,
+    "reward": 500,
+    "color": "#00ff88",
+    "description": "Master of proportions and constants"
+  },
+  {
+    "id": "boss-02",
+    "name": "Matrix Master",
+    "zone": 2,
+    "hp": 120,
+    "questionsToDefeat": 5,
+    "reward": 600,
+    "color": "#00ffff",
+    "description": "Rows and columns are under his control"
+  },
+  {
+    "id": "boss-03",
+    "name": "Insurance Inspector",
+    "zone": 3,
+    "hp": 140,
+    "questionsToDefeat": 6,
+    "reward": 700,
+    "color": "#ff8800",
+    "description": "Premiums and deductibles are his weapons"
+  },
+  {
+    "id": "boss-04",
+    "name": "Tax Titan",
+    "zone": 4,
+    "hp": 160,
+    "questionsToDefeat": 6,
+    "reward": 800,
+    "color": "#ffd700",
+    "description": "Deductions and rebates cannot save you"
+  },
+  {
+    "id": "boss-05",
+    "name": "Geometry Ghost",
+    "zone": 5,
+    "hp": 180,
+    "questionsToDefeat": 7,
+    "reward": 900,
+    "color": "#ff00ff",
+    "description": "Translations and rotations confuse the mind"
+  },
+  {
+    "id": "boss-06",
+    "name": "Sine Serpent",
+    "zone": 6,
+    "hp": 200,
+    "questionsToDefeat": 7,
+    "reward": 1000,
+    "color": "#0088ff",
+    "description": "Riding the waves of amplitude and period"
+  },
+  {
+    "id": "boss-07",
+    "name": "Data Daemon",
+    "zone": 7,
+    "hp": 220,
+    "questionsToDefeat": 8,
+    "reward": 1100,
+    "color": "#88ff00",
+    "description": "Standard deviations away from normal"
+  },
+  {
+    "id": "boss-08",
+    "name": "Modelling Mastermind",
+    "zone": 8,
+    "hp": 250,
+    "questionsToDefeat": 8,
+    "reward": 1500,
+    "color": "#ff0000",
+    "description": "The ultimate challenge of SPM Mathematics"
+  }
+]
