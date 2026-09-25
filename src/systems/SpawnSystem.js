@@ -161,6 +161,10 @@ export default class SpawnSystem {
 
   spawnMathGate(question, speed) {
     if (this.mathGate.active) return; // don't spawn if already active
+    // Clear any active obstacles so player has completely open lanes for calculation
+    this.obstaclePool.forEach(o => {
+      if (o.active) o.deactivate();
+    });
     this.mathGate.activate(question, speed);
     this.lastGateDistance += this.gateDistance;
   }

@@ -168,6 +168,13 @@ export default class GameScene extends Phaser.Scene {
       this.resumeFromBoss();
     });
 
+    // Math Gate descent event (resumes calm background scroll after auto pause)
+    this.events.on('mathgate-start-descending', () => {
+      if (this.isRunning && !this.isPaused) {
+        this.runnerSystem.setSpeedMultiplier(0.35);
+      }
+    });
+
     // Start background synthwave music
     audioManager.startBGM(125, 'Am');
 
@@ -221,13 +228,16 @@ export default class GameScene extends Phaser.Scene {
 
     // ── Sprint Mode Countdown Timer ──
     if (this.mode === 'sprint') {
-      this.sprintTimeRemaining -= (delta / 1000);
-      this.hud.updateSprintTimer(this.sprintTimeRemaining);
+      // Pause sprint timer while calculation auto-pause is active
+      if (!this.mathGate || !this.mathGate.isCalculationPaused) {
+        this.sprintTimeRemaining -= (delta / 1000);
+        this.hud.updateSprintTimer(this.sprintTimeRemaining);
 
-      if (this.sprintTimeRemaining <= 0) {
-        this.sprintTimeRemaining = 0;
-        this.handleSprintFinish("TIME'S UP!");
-        return;
+        if (this.sprintTimeRemaining <= 0) {
+          this.sprintTimeRemaining = 0;
+          this.handleSprintFinish("TIME'S UP!");
+          return;
+        }
       }
     }
 
@@ -290,7 +300,7 @@ export default class GameScene extends Phaser.Scene {
       const chapter = (this.mode === 'sprint') ? null : this.zoneSystem.getCurrentChapter();
       const question = this.questionSystem.getRandomQuestion(chapter, range.min, range.max);
       if (question) {
-        this.runnerSystem.setSpeedMultiplier(0.4); // Calm calculation focus mode
+        this.runnerSystem.setSpeedMultiplier(0); // Auto pause runner when question appears
         this.spawnSystem.spawnMathGate(question, speed);
       }
     }
