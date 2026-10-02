@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getTopScores, fetchGlobalScores } from '../utils/Storage.js';
 import audioManager from '../utils/AudioManager.js';
+import PortraitScreen, { mobileElement } from '../ui/PortraitScreen.js';
 
 export default class LeaderboardScene extends Phaser.Scene {
     constructor() {
@@ -11,6 +12,7 @@ export default class LeaderboardScene extends Phaser.Scene {
     }
 
     create() {
+        this.loadRequestId = 0;
         this.cameras.main.setBackgroundColor('#0a0a2e');
         const { width, height } = this.cameras.main;
 
@@ -50,6 +52,9 @@ export default class LeaderboardScene extends Phaser.Scene {
             audioManager.playClick();
             this.scene.start('MainMenuScene');
         });
+
+        this.portrait = new PortraitScreen(this, 'LEADERBOARD', 'Scores from the game');
+        this.renderPortraitScores([], 'Loading scores…');
 
         // Load initial tab view
         this.loadCurrentTab();
@@ -98,34 +103,60 @@ export default class LeaderboardScene extends Phaser.Scene {
     }
 
     async loadCurrentTab() {
+        const requestId = ++this.loadRequestId;
         this.scoresContainer.removeAll(true);
 
         if (this.currentTab === 'global') {
             this.statusText.setText('CONNECTING TO CYE GLOBAL NETWORK...');
             const globalScores = await fetchGlobalScores(10);
+            if (!this.sys.isActive() || requestId !== this.loadRequestId) return;
             this.statusText.setText('');
-
             if (globalScores && globalScores.length > 0) {
                 this.renderScoresTable(globalScores);
+                this.renderPortraitScores(globalScores);
+            } else if (globalScores) {
+                this.statusText.setText('No global scores yet. Finish a run to be first!');
+                this.renderPortraitScores([], 'No global scores yet. Finish a run to be first!');
             } else {
-                // Offline fallback
-                const local = getTopScores(10) || [];
-                if (local.length > 0) {
-                    this.statusText.setText('🌐 (Offline Mode — Displaying Local Scores)');
-                    this.renderScoresTable(local);
-                } else {
-                    this.statusText.setText('No global records yet.\nBe the first to upload an SPM run!');
-                }
+                this.statusText.setText('Global leaderboard unavailable. Try again later.');
+                this.renderPortraitScores([], 'Global leaderboard unavailable. Try again later.');
             }
         } else {
             this.statusText.setText('');
             const local = getTopScores(10) || [];
             if (local.length > 0) {
                 this.renderScoresTable(local);
+                this.renderPortraitScores(local);
             } else {
                 this.statusText.setText('No local scores saved on this device yet.');
+                this.renderPortraitScores([], 'No local scores saved yet');
             }
         }
+    }
+
+    renderPortraitScores(scores, status = '') {
+        const ui = this.portrait;
+        ui.setHeader('LEADERBOARD', status || (this.currentTab === 'global' ? 'Global ranks' : 'Local device'));
+        ui.clear();
+        ui.addChoice('🌐 GLOBAL RANKS', '', () => {
+            this.currentTab = 'global';
+            this.updateTabStyles();
+            this.renderPortraitScores([], 'Loading scores…');
+            this.loadCurrentTab();
+        }, this.currentTab === 'global');
+        ui.addChoice('📱 LOCAL DEVICE', '', () => {
+            this.currentTab = 'local';
+            this.updateTabStyles();
+            this.renderPortraitScores([], 'Loading scores…');
+            this.loadCurrentTab();
+        }, this.currentTab === 'local');
+        scores.forEach((score, index) => {
+            const card = mobileElement('div', 'portrait-card');
+            card.append(mobileElement('h2', '', `#${index + 1} ${score.name || 'Runner'}`),
+                mobileElement('p', '', `SCORE ${score.score || 0} • ${score.distance || 0}m • ${(score.accuracy || 0).toFixed(1)}% accuracy`));
+            ui.content.append(card);
+        });
+        ui.addBack('BACK TO MENU', () => this.scene.start('MainMenuScene'));
     }
 
     renderScoresTable(scores) {

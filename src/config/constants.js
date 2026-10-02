@@ -3,11 +3,14 @@ export const SCENES = {
   BOOT: 'BootScene',
   PRELOAD: 'PreloadScene',
   MAIN_MENU: 'MainMenuScene',
+  TUTORIAL: 'TutorialScene',
+  MASTERY: 'MasteryScene',
   MODE_SELECT: 'ModeSelectScene',
   GAME: 'GameScene',
   BOSS: 'BossScene',
   RESULTS: 'ResultsScene',
   LEADERBOARD: 'LeaderboardScene'
+  ,PROGRESS_REPORT: 'ProgressReportScene'
 };
 
 // Custom events emitted via scene.events or scene.game.events
@@ -171,5 +174,7 @@ export const STORAGE_KEYS = {
   HIGH_SCORES: 'cye-math-runner-scores',
   SETTINGS: 'cye-math-runner-settings',
   PLAYER_NAME: 'cye-math-runner-name',
-  LANGUAGE: 'cye-math-runner-lang'
+  LANGUAGE: 'cye-math-runner-lang',
+  MASTERY: 'cye-math-runner-mastery',
+  LEARNING_ANALYTICS: 'cye-math-runner-learning-analytics'
 };

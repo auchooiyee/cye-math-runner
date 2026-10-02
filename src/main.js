@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import './ui/mobile.css';
 import { GAME_WIDTH, GAME_HEIGHT, PHYSICS, COLORS } from './config/gameConfig.js';
 import { SCENES } from './config/constants.js';
 import BootScene from './scenes/BootScene.js';
@@ -9,6 +10,9 @@ import GameScene from './scenes/GameScene.js';
 import BossScene from './scenes/BossScene.js';
 import ResultsScene from './scenes/ResultsScene.js';
 import LeaderboardScene from './scenes/LeaderboardScene.js';
+import TutorialScene from './scenes/TutorialScene.js';
+import MasteryScene from './scenes/MasteryScene.js';
+import ProgressReportScene from './scenes/ProgressReportScene.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -31,11 +35,14 @@ const config = {
     BootScene,
     PreloadScene,
     MainMenuScene,
+    TutorialScene,
+    MasteryScene,
     ModeSelectScene,
     GameScene,
     BossScene,
     ResultsScene,
     LeaderboardScene
+    ,ProgressReportScene
   ]
 };
 

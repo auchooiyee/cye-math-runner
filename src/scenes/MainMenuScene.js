@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { getLanguage, saveLanguage, getPlayerName, savePlayerName } from '../utils/Storage.js';
+import { getLanguage, saveLanguage, getPlayerName, savePlayerName, getSetting } from '../utils/Storage.js';
 import audioManager from '../utils/AudioManager.js';
+import PortraitScreen, { mobileButton } from '../ui/PortraitScreen.js';
 
 export default class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -87,12 +88,29 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         // Buttons
-        this.createButton(width / 2, 400, 'PLAY GAME', () => {
-            this.scene.start('ModeSelectScene');
+        const startGame = () => {
+            if (getSetting('tutorialComplete', false)) {
+                this.scene.start('ModeSelectScene');
+            } else {
+                this.scene.start('TutorialScene', { nextScene: 'ModeSelectScene' });
+            }
+        };
+        this.createButton(width / 2, 350, 'PLAY GAME', startGame);
+
+        this.createButton(width / 2, 420, 'MASTERY DASHBOARD', () => {
+            this.scene.start('MasteryScene');
         });
 
-        this.createButton(width / 2, 480, 'LEADERBOARD', () => {
+        this.createButton(width / 2, 490, 'LEADERBOARD', () => {
             this.scene.start('LeaderboardScene');
+        });
+
+        this.createButton(width / 2, 560, 'PROGRESS REPORT', () => {
+            this.scene.start('ProgressReportScene');
+        });
+
+        this.createButton(width / 2, 630, 'HOW TO PLAY', () => {
+            this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true });
         });
 
         // Audio toggle button
@@ -129,7 +147,7 @@ export default class MainMenuScene extends Phaser.Scene {
 
         // Pilot Name badge
         const playerName = getPlayerName() || 'PILOT';
-        const nameCard = this.add.text(width / 2, 575, `🎮 PILOT: ${playerName.toUpperCase()}`, {
+        const nameCard = this.add.text(width / 2, 690, `🎮 PILOT: ${playerName.toUpperCase()}`, {
             fontSize: '18px',
             fontFamily: '"Rajdhani", "Orbitron", sans-serif',
             fontStyle: 'bold',
@@ -139,7 +157,7 @@ export default class MainMenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         nameCard.on('pointerdown', () => {
-            const newName = prompt('Enter player name:', playerName);
+            const newName = prompt('Choose a nickname (not your real name):', playerName);
             if (newName) {
                 savePlayerName(newName);
                 nameCard.setText(`🎮 PILOT: ${newName.toUpperCase()}`);
@@ -152,6 +170,30 @@ export default class MainMenuScene extends Phaser.Scene {
             fontFamily: '"Rajdhani", sans-serif',
             color: '#6688aa'
         }).setOrigin(0, 1);
+
+        const portrait = new PortraitScreen(this, 'CYE MATH RUNNER', 'RUN • SOLVE • SURVIVE');
+        portrait.addChoice('PLAY GAME', 'Start an endless run, exam sprint, or chapter practice', startGame);
+        portrait.addChoice('MASTERY DASHBOARD', 'Review chapter mastery and weak topics', () => this.scene.start('MasteryScene'));
+        portrait.addChoice('LEADERBOARD', 'See the current rankings', () => this.scene.start('LeaderboardScene'));
+        portrait.addChoice('PROGRESS REPORT', 'Review learning progress', () => this.scene.start('ProgressReportScene'));
+        portrait.addChoice('HOW TO PLAY', 'Movement, gates, and bosses', () => this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true }));
+        portrait.addChoice(`PILOT: ${playerName.toUpperCase()}`, 'Tap to change your nickname', () => {
+            const updatedName = prompt('Choose a nickname (not your real name):', getPlayerName() || 'PILOT');
+            if (updatedName) {
+                savePlayerName(updatedName);
+                nameCard.setText(`🎮 PILOT: ${updatedName.toUpperCase()}`);
+                portrait.content.lastElementChild.querySelector('button').textContent = `PILOT: ${updatedName.toUpperCase()}`;
+            }
+        });
+        portrait.addBack(audioManager.isMuted ? '🔇 SOUND OFF' : '🔊 SOUND ON', () => {
+            const muted = audioManager.toggleMute();
+            portrait.footer.querySelector('button').textContent = muted ? '🔇 SOUND OFF' : '🔊 SOUND ON';
+        });
+        portrait.footer.append(mobileButton('EN / BM', () => {
+            const newLang = getLanguage() === 'en' ? 'bm' : 'en';
+            saveLanguage(newLang);
+            this.scene.restart();
+        }, 'portrait-back'));
     }
 
     createButton(x, y, textStr, onClick) {

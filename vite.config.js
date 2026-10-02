@@ -13,22 +13,9 @@ export default defineConfig({
         server.middlewares.use(async (req, res, next) => {
           if (req.url && req.url.startsWith('/api/scores')) {
             try {
-              const { handler } = await import('./netlify/functions/scores.js');
-              let body = '';
-              req.on('data', chunk => { body += chunk; });
-              req.on('end', async () => {
-                const url = new URL(req.url, 'http://localhost');
-                const queryParams = Object.fromEntries(url.searchParams);
-                const event = {
-                  httpMethod: req.method,
-                  body: body || null,
-                  queryStringParameters: queryParams
-                };
-                const response = await handler(event, {});
-                res.statusCode = response.statusCode;
-                Object.entries(response.headers || {}).forEach(([k, v]) => res.setHeader(k, v));
-                res.end(response.body);
-              });
+              res.statusCode = 503;
+              res.setHeader('Content-Type', 'application/json; charset=utf-8');
+              res.end(JSON.stringify({ success: false, error: 'Local Vite server has no D1 database. Use Wrangler Pages dev to test the real leaderboard.' }));
               return;
             } catch (err) {
               console.error('API middleware error:', err);

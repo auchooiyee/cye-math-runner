@@ -9,7 +9,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Config
     this.LANE_POSITIONS = [380, 640, 900];
-    this.LANE_SWITCH_DURATION = 150;
+    this.LANE_SWITCH_DURATION = 120;
     this.SLIDE_DURATION = 650;
     this.INITIAL_SHIELDS = 3;
     this.MAX_SHIELDS = 5;
@@ -24,6 +24,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.isSliding = false;
     this.isInvincible = false;
     this.isDead = false;
+    this.laneTween = null;
 
     // Add to scene and physics
     scene.add.existing(this);
@@ -31,7 +32,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Physics properties
     this.setCollideWorldBounds(true);
-    this.body.setSize(36, 56);
+    this.body.setSize(32, 50);
     this.setPosition(this.LANE_POSITIONS[this.currentLane], this.GROUND_Y - 32);
   }
 
@@ -49,31 +50,35 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   moveLeft() {
-    if (this.currentLane > 0 && !this.isDead) {
-      this.currentLane--;
-      this.setAngle(-14);
-      this.scene.tweens.add({
-        targets: this,
-        x: this.LANE_POSITIONS[this.currentLane],
-        angle: 0,
-        duration: this.LANE_SWITCH_DURATION,
-        ease: 'Power1'
-      });
-    }
+    this.moveToLane(this.currentLane - 1);
   }
 
   moveRight() {
-    if (this.currentLane < 2 && !this.isDead) {
-      this.currentLane++;
-      this.setAngle(14);
-      this.scene.tweens.add({
-        targets: this,
-        x: this.LANE_POSITIONS[this.currentLane],
-        angle: 0,
-        duration: this.LANE_SWITCH_DURATION,
-        ease: 'Power1'
-      });
+    this.moveToLane(this.currentLane + 1);
+  }
+
+  moveToLane(lane) {
+    if (this.isDead || lane < 0 || lane > 2 || lane === this.currentLane) return;
+    const direction = lane < this.currentLane ? -14 : 14;
+    this.currentLane = lane;
+    this.switchLane(direction);
+  }
+
+  switchLane(leanAngle) {
+    if (this.laneTween?.isPlaying()) {
+      this.laneTween.stop();
     }
+    this.setAngle(leanAngle);
+    this.laneTween = this.scene.tweens.add({
+      targets: this,
+      x: this.LANE_POSITIONS[this.currentLane],
+      angle: 0,
+      duration: this.LANE_SWITCH_DURATION,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.laneTween = null;
+      }
+    });
   }
 
   jump() {
@@ -90,7 +95,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.isSliding && isGrounded && !this.isDead) {
       this.isSliding = true;
       this.setTexture('player-slide');
-      this.body.setSize(56, 28);
+      this.body.setSize(48, 22);
       this.y = this.GROUND_Y - 16;
       audioManager.playSlide();
 
@@ -98,7 +103,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         if (!this.isDead) {
           this.isSliding = false;
           this.setTexture('player');
-          this.body.setSize(36, 56);
+          this.body.setSize(32, 50);
           this.setAngle(0);
           this.y = this.GROUND_Y - 32;
           this.setVelocityY(0);
@@ -159,9 +164,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.isDead = false;
     this.alpha = 1;
     this.setAngle(0);
+    this.laneTween?.stop();
+    this.laneTween = null;
     
     this.setTexture('player');
-    this.body.setSize(36, 56);
+    this.body.setSize(32, 50);
     this.setPosition(this.LANE_POSITIONS[this.currentLane], this.GROUND_Y - 32);
     this.setVelocity(0, 0);
   }

@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
 import audioManager from '../utils/AudioManager.js';
+import { getDailyChallenge } from '../utils/Storage.js';
+import PortraitScreen from '../ui/PortraitScreen.js';
+
+const CHAPTER_NAMES = ['Variation', 'Matrices', 'Insurance', 'Taxation', 'Transformations', 'Trigonometry', 'Dispersion', 'Modelling'];
 
 export default class ModeSelectScene extends Phaser.Scene {
     constructor() {
@@ -60,15 +64,121 @@ export default class ModeSelectScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.modeSelectionContainer.add([spmBtn, spmDesc]);
 
+        // Chapter Practice Button
+        const practiceBtn = this.createButton(width / 2, 430, '📘 CHAPTER PRACTICE', () => {
+            this.showPracticeOptions(width, height);
+        });
+        const practiceDesc = this.add.text(width / 2, 472, '● Choose one chapter • No obstacles • Adaptive mastery session', {
+            fontSize: '15px', fontFamily: '"Rajdhani", sans-serif', fontStyle: 'bold', color: '#ffcc00'
+        }).setOrigin(0.5);
+        this.modeSelectionContainer.add([practiceBtn, practiceDesc]);
+
+        const daily = getDailyChallenge();
+        const dailyBtn = this.createButton(width / 2, 535, daily.completed ? '✅ DAILY COMPLETE' : '🔥 DAILY CHALLENGE', () => {
+            if (daily.completed) return;
+            const chapterNames = ['Variation', 'Matrices', 'Insurance', 'Taxation', 'Transformations', 'Trigonometry', 'Dispersion', 'Modelling'];
+            this.scene.start('GameScene', {
+                mode: 'practice',
+                practiceChapter: daily.chapter,
+                practiceChapterName: chapterNames[daily.chapter - 1],
+                targetQuestions: 12,
+                difficulty: daily.difficulty,
+                dailyChallenge: true,
+                dailyChallengeKey: daily.dateKey
+            });
+        });
+        const streakLabel = daily.streak > 0 ? ` • ${daily.streak}-DAY STREAK` : '';
+        const dailyDesc = this.add.text(width / 2, 570, `Chapter ${daily.chapter} • ${daily.difficulty.label} • 12 questions${streakLabel}`, {
+            fontSize: '14px', fontFamily: '"Rajdhani", sans-serif', fontStyle: 'bold', color: daily.completed ? '#88ccff' : '#ff6688'
+        }).setOrigin(0.5);
+        this.modeSelectionContainer.add([dailyBtn, dailyDesc]);
+
+        const bossBtn = this.createButton(width / 2, 635, '👑 BOSS TRAINING', () => {
+            this.showBossTrainingOptions(width, height);
+        });
+        this.modeSelectionContainer.add(bossBtn);
+
         // Back button
-        this.backBtn = this.createButton(width / 2, height - 65, 'BACK TO MENU', () => {
+        this.backBtn = this.createButton(width / 2, height - 30, 'BACK TO MENU', () => {
             if (this.subOptionElements.length > 0) {
                 this.clearSubOptions();
                 this.modeSelectionContainer.setVisible(true);
             } else {
                 this.scene.start('MainMenuScene');
             }
-        });
+        }).setDepth(50);
+
+        this.portrait = new PortraitScreen(this, 'SELECT GAME MODE', 'Choose your Mathematics challenge');
+        this.showPortraitMain(daily);
+    }
+
+    showPortraitMain(daily = getDailyChallenge()) {
+        const ui = this.portrait;
+        ui.setHeader('SELECT GAME MODE', 'Choose your Mathematics challenge');
+        ui.clear();
+        ui.addChoice('⚡ ENDLESS RUN', 'Eight zones, obstacles, and boss showdowns', () => this.showPortraitEndless());
+        ui.addChoice('⏱️ SPM SPRINT', 'Timed Form 5 exam practice', () => this.showPortraitSprint());
+        ui.addChoice('📘 CHAPTER PRACTICE', 'Adaptive questions without obstacles', () => this.showPortraitChapters(false));
+        ui.addChoice(daily.completed ? '✅ DAILY COMPLETE' : '🔥 DAILY CHALLENGE',
+            `Chapter ${daily.chapter} • ${daily.difficulty.label} • 12 questions`, () => {
+                this.scene.start('GameScene', {
+                    mode: 'practice',
+                    practiceChapter: daily.chapter,
+                    practiceChapterName: CHAPTER_NAMES[daily.chapter - 1],
+                    targetQuestions: 12,
+                    difficulty: daily.difficulty,
+                    dailyChallenge: true,
+                    dailyChallengeKey: daily.dateKey
+                });
+            }, daily.completed);
+        ui.addChoice('👑 BOSS TRAINING', 'Fight a chapter guardian immediately', () => this.showPortraitChapters(true));
+        ui.addBack('BACK TO MENU', () => this.scene.start('MainMenuScene'));
+    }
+
+    showPortraitSubmenu(title, subtitle, choices) {
+        const ui = this.portrait;
+        ui.setHeader(title, subtitle);
+        ui.clear();
+        choices.forEach(({ label, detail, action }) => ui.addChoice(label, detail, action));
+        ui.addBack('◀ GAME MODES', () => this.showPortraitMain());
+    }
+
+    showPortraitEndless() {
+        const difficulties = [
+            { label: 'EASY', detail: 'Form 5 core basics', min: 1, max: 2 },
+            { label: 'NORMAL', detail: 'Standard SPM mathematics', min: 2, max: 4 },
+            { label: 'HARD', detail: 'Advanced KBAT questions', min: 4, max: 6 }
+        ];
+        this.showPortraitSubmenu('ENDLESS RUN', 'Choose a difficulty', difficulties.map(d => ({
+            label: d.label, detail: d.detail,
+            action: () => this.scene.start('GameScene', { mode: 'endless', difficulty: { label: d.label, min: d.min, max: d.max } })
+        })));
+    }
+
+    showPortraitSprint() {
+        const presets = [
+            { label: 'QUICK SPRINT — 5 MINS', detail: '15 questions • Standard SPM', duration: 300, target: 15, difficulty: { label: 'Standard', min: 2, max: 4 } },
+            { label: 'SPM PAPER 1 — 10 MINS', detail: '30 questions • Exam simulation', duration: 600, target: 30, difficulty: { label: 'SPM Exam', min: 2, max: 5 } },
+            { label: 'KBAT SPRINT — 5 MINS', detail: '15 high-order questions', duration: 300, target: 15, difficulty: { label: 'KBAT Hard', min: 4, max: 6 } }
+        ];
+        this.showPortraitSubmenu('SPM SPRINT', 'Choose an exam preset', presets.map(p => ({
+            label: p.label, detail: p.detail,
+            action: () => this.scene.start('GameScene', { mode: 'sprint', sprintDuration: p.duration, targetQuestions: p.target, difficulty: p.difficulty })
+        })));
+    }
+
+    showPortraitChapters(bossTraining) {
+        this.showPortraitSubmenu(bossTraining ? 'BOSS TRAINING' : 'CHAPTER PRACTICE',
+            bossTraining ? 'Choose a guardian' : 'Choose a chapter', CHAPTER_NAMES.map((name, index) => ({
+                label: `${index + 1}. ${name}`,
+                action: () => this.scene.start('GameScene', {
+                    mode: bossTraining ? 'bossTraining' : 'practice',
+                    practiceChapter: index + 1,
+                    practiceChapterName: name,
+                    targetQuestions: bossTraining ? 3 : 10,
+                    difficulty: bossTraining ? { label: 'Boss Training', min: 3, max: 6 } : { label: 'Adaptive', min: 1, max: 5 }
+                })
+            })));
     }
 
     clearSubOptions() {
@@ -170,6 +280,67 @@ export default class ModeSelectScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             this.subOptionElements.push(btn, sub);
+        });
+    }
+
+    showPracticeOptions(width, height) {
+        this.modeSelectionContainer.setVisible(false);
+        this.clearSubOptions();
+
+        const title = this.add.text(width / 2, 155, 'CHAPTER PRACTICE — SELECT TOPIC', {
+            fontSize: '26px', fontFamily: '"Orbitron", sans-serif', color: '#ffcc00', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        const subtitle = this.add.text(width / 2, 188, '10 adaptive questions • relaxed run • progress saved to mastery', {
+            fontSize: '16px', fontFamily: '"Rajdhani", sans-serif', color: '#bcd8ff', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.subOptionElements.push(title, subtitle);
+
+        const chapters = [
+            'Variation', 'Matrices', 'Insurance', 'Taxation',
+            'Transformations', 'Trigonometry', 'Dispersion', 'Modelling'
+        ];
+        chapters.forEach((name, index) => {
+            const column = index % 2;
+            const row = Math.floor(index / 2);
+            const btn = this.createButton(column === 0 ? 430 : 850, 245 + row * 92, `${index + 1}. ${name}`, () => {
+                this.scene.start('GameScene', {
+                    mode: 'practice',
+                    practiceChapter: index + 1,
+                    practiceChapterName: name,
+                    targetQuestions: 10,
+                    difficulty: { label: 'Adaptive', min: 1, max: 5 }
+                });
+            });
+            this.subOptionElements.push(btn);
+        });
+    }
+
+    showBossTrainingOptions(width, height) {
+        this.modeSelectionContainer.setVisible(false);
+        this.clearSubOptions();
+
+        const title = this.add.text(width / 2, 150, 'BOSS TRAINING — SELECT CHAPTER', {
+            fontSize: '26px', fontFamily: '"Orbitron", sans-serif', color: '#ffcc00', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        const subtitle = this.add.text(width / 2, 184, 'Fight one guardian immediately • 3 questions • safe practice arena', {
+            fontSize: '16px', fontFamily: '"Rajdhani", sans-serif', color: '#bcd8ff', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        this.subOptionElements.push(title, subtitle);
+
+        const chapters = ['Variation', 'Matrices', 'Insurance', 'Taxation', 'Transformations', 'Trigonometry', 'Dispersion', 'Modelling'];
+        chapters.forEach((name, index) => {
+            const column = index % 2;
+            const row = Math.floor(index / 2);
+            const btn = this.createButton(column === 0 ? 430 : 850, 240 + row * 85, `${index + 1}. ${name}`, () => {
+                this.scene.start('GameScene', {
+                    mode: 'bossTraining',
+                    practiceChapter: index + 1,
+                    practiceChapterName: name,
+                    targetQuestions: 3,
+                    difficulty: { label: 'Boss Training', min: 3, max: 6 }
+                });
+            });
+            this.subOptionElements.push(btn);
         });
     }
 

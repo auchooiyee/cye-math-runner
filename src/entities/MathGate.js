@@ -24,6 +24,7 @@ export default class MathGate {
     this.pauseTimer = null;
     this.countdownEvent = null;
     this.correctLane = -1;
+    this.selectedOptions = [];
     this.currentQuestion = null;
     this.speed = 0;
     this.gateY = -200;
@@ -120,6 +121,8 @@ export default class MathGate {
     }
 
     this.correctLane = selectedOptions.indexOf(correctStr);
+    this.selectedOptions = selectedOptions;
+    this.scene.events.emit('mathgate-activated', { question: questionData.question, options: selectedOptions });
 
     // Display question in fixed top banner
     const topic = questionData.topic ? ` • ${questionData.topic.toUpperCase()}` : '';
@@ -205,6 +208,7 @@ export default class MathGate {
       this.countdownEvent = null;
     }
     this.questionBanner.setVisible(false);
+    this.scene.events.emit('mathgate-deactivated');
     for (let i = 0; i < 3; i++) {
       this.doors[i].disableBody(true, true);
       this.doors[i].setVelocity(0, 0);
@@ -213,9 +217,12 @@ export default class MathGate {
   }
 
   checkAnswer(playerLane) {
+    const selectedAnswer = this.selectedOptions[playerLane] || '';
     return {
       correct: playerLane === this.correctLane,
-      correctAnswer: this.labels[this.correctLane]?.text || ''
+      correctAnswer: this.selectedOptions[this.correctLane] || '',
+      selectedAnswer,
+      selectedAnswerIndex: this.currentQuestion?.options.indexOf(selectedAnswer) ?? -1
     };
   }
 

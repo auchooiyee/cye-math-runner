@@ -63,6 +63,7 @@ export default class HUD {
 
         // Sprint mode specific UI elements
         this.isSprintMode = false;
+        this.progressLabel = 'SPM EXAM';
         this.sprintTimerText = scene.add.text(width / 2, 18, '', {
             fontSize: '26px', fontFamily: "'Orbitron', sans-serif", color: '#00ffff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
@@ -78,11 +79,32 @@ export default class HUD {
 
     setSprintMode(durationSeconds, targetQuestions) {
         this.isSprintMode = true;
+        this.progressLabel = 'SPM EXAM';
         this.sprintTimerText.setVisible(true);
         this.sprintProgressText.setVisible(true);
         this.updateSprintTimer(durationSeconds);
         this.updateSprintProgress(0, targetQuestions);
         // Adjust combo text position slightly lower so they don't overlap
+        this.comboText.setY(85);
+    }
+
+    setPracticeMode(chapterName, targetQuestions, topic = null) {
+        this.isSprintMode = true;
+        this.progressLabel = topic
+            ? `FOCUS • ${topic.toUpperCase()}`
+            : `PRACTICE • ${chapterName.toUpperCase()}`;
+        this.sprintTimerText.setVisible(false);
+        this.sprintProgressText.setVisible(true);
+        this.updateSprintProgress(0, targetQuestions);
+        this.comboText.setY(85);
+    }
+
+    setBossTrainingMode(chapterName, targetQuestions = 3) {
+        this.isSprintMode = true;
+        this.progressLabel = `BOSS TRAINING • ${chapterName.toUpperCase()}`;
+        this.sprintTimerText.setVisible(false);
+        this.sprintProgressText.setVisible(true);
+        this.updateSprintProgress(0, targetQuestions);
         this.comboText.setY(85);
     }
 
@@ -116,7 +138,7 @@ export default class HUD {
 
     updateSprintProgress(completed, target) {
         if (!this.isSprintMode) return;
-        this.sprintProgressText.setText(`SPM EXAM: ${completed}/${target} Qs`);
+        this.sprintProgressText.setText(`${this.progressLabel}: ${completed}/${target} Qs`);
     }
 
     updateDistance(metres) {
@@ -152,7 +174,6 @@ export default class HUD {
         const title = lang === 'bm' ? zone.nameBm : zone.nameEn;
         this.zoneText.setText(`ZONE 0${zone.id} | ${title.toUpperCase()}`);
         this.zoneText.setColor(zone.labelColor);
-        this.showZoneBanner(zone, lang);
     }
 
     showZoneBanner(zone, lang) {

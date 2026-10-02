@@ -19,6 +19,59 @@
       user-select: none;
       font-family: 'Rajdhani', 'Orbitron', 'Segoe UI', sans-serif;
     }
+    .boss-mobile-overlay { display: none; }
+    @media (orientation: portrait) and (max-width: 900px) {
+      .boss-mobile-overlay { display: flex; }
+    }
+    .boss-mobile-overlay[data-modal="true"] { display: flex; }
+    .boss-mobile-overlay [hidden] { display: none !important; }
+    .boss-mobile-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      box-sizing: border-box;
+      flex-direction: column;
+      gap: 14px;
+      padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+      color: #fff;
+      background: linear-gradient(165deg, #07132c, #030715 75%);
+      font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .boss-mobile-overlay h1, .boss-mobile-overlay h2, .boss-mobile-overlay p { margin: 0; }
+    .boss-mobile-overlay h1 { color: #00ffff; font: 800 clamp(22px, 7vw, 34px) 'Orbitron', sans-serif; text-align: center; }
+    .boss-mobile-overlay h2 { color: #ffea6c; font: 700 18px 'Fira Code', monospace; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .boss-mobile-overlay .matrix-equation { display: block; max-width: 100%; overflow-x: auto; white-space: nowrap; font: 500 clamp(16px, 5vw, 22px) 'Cambria Math', 'STIX Two Math', serif; text-align: center; }
+    .boss-mobile-overlay .matrix-equation math { margin: 0 0.15em; vertical-align: middle; }
+    .boss-mobile-overlay .boss-mobile-subtitle { color: #a9c4e5; text-align: center; font-size: 16px; }
+    .boss-mobile-overlay .boss-mobile-hp { height: 18px; border: 2px solid #00ffff; border-radius: 6px; overflow: hidden; }
+    .boss-mobile-overlay .boss-mobile-hp-fill { height: 100%; background: #00ff88; transition: width 250ms; }
+    .boss-mobile-overlay .boss-mobile-hp-label { color: #00ff88; text-align: center; font: 700 16px 'Fira Code', monospace; }
+    .boss-mobile-overlay .boss-mobile-card { display: flex; flex-direction: column; gap: 18px; padding: 20px; border: 2px solid #00ffff; border-radius: 12px; background: #0a1934; }
+    .boss-mobile-overlay .boss-mobile-answer { color: #00ffff; text-align: center; font: 700 22px 'Fira Code', monospace; }
+    .boss-mobile-overlay .boss-mobile-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .boss-mobile-overlay .boss-mobile-options { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .boss-mobile-overlay button { min-height: 54px; border: 2px solid #00ffff; border-radius: 9px; color: #fff; background: #13315b; font: 700 20px 'Rajdhani', sans-serif; touch-action: manipulation; cursor: pointer; }
+    .boss-mobile-overlay button:active { background: #1e5d87; }
+    .boss-mobile-overlay button:focus-visible { outline: 3px solid #ffea6c; outline-offset: 2px; }
+    .boss-mobile-overlay button:disabled { opacity: .55; cursor: default; }
+    .boss-mobile-overlay .boss-mobile-submit { width: 100%; background: #075451; font-family: 'Orbitron', sans-serif; font-size: 15px; }
+    .boss-mobile-overlay .boss-mobile-feedback { border-color: #ff6688; }
+    .boss-mobile-overlay .boss-mobile-feedback h2 { color: #ff6688; }
+    .boss-mobile-overlay .boss-mobile-feedback p { font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
+    .boss-mobile-overlay .boss-mobile-feedback strong { display: block; color: #ffcc00; font-size: 15px; }
+    .boss-mobile-overlay .boss-mobile-feedback .boss-mobile-correct { color: #00ff88; }
+    .boss-mobile-overlay .boss-mobile-feedback .boss-mobile-chosen { color: #ff6688; }
+    .boss-mobile-overlay .boss-mobile-spacer { flex: 1; min-height: 0; }
+    @media (max-height: 650px) {
+      .boss-mobile-overlay { gap: 9px; }
+      .boss-mobile-overlay .boss-mobile-card { gap: 10px; padding: 12px; }
+      .boss-mobile-overlay button { min-height: 44px; }
+    }
   </style>
 </head>
 <body>

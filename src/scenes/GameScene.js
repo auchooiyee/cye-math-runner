@@ -11,9 +11,11 @@ import Player from '../entities/Player.js';
 import InputManager from '../utils/InputManager.js';
 import HUD from '../ui/HUD.js';
 import MathGateUI from '../ui/MathGateUI.js';
+import PortraitRunnerUI from '../ui/PortraitRunnerUI.js';
 import ZoneSystem from '../systems/ZoneSystem.js';
 import audioManager from '../utils/AudioManager.js';
 import { EVENTS } from '../config/constants.js';
+import { getMasteryProgress } from '../utils/Storage.js';
 
 const GROUND_Y = 620;
 const LANE_POSITIONS = [380, 640, 900];
@@ -29,13 +31,32 @@ export default class GameScene extends Phaser.Scene {
     this.sprintDuration = data.sprintDuration || 300;
     this.sprintTimeRemaining = this.sprintDuration;
     this.targetQuestions = data.targetQuestions || 15;
+    this.practiceChapter = data.practiceChapter || 1;
+    this.practiceChapterName = data.practiceChapterName || 'Variation';
+    this.practiceTopic = data.practiceTopic || null;
+    this.isBossTraining = data.mode === 'bossTraining';
+    this.masteryBefore = getMasteryProgress().chapters;
+    const beforeTopic = this.masteryBefore?.[String(this.practiceChapter)]?.topics?.[this.practiceTopic] || {};
+    this.topicAccuracyBefore = beforeTopic.attempted ? Math.round(((beforeTopic.correct || 0) / beforeTopic.attempted) * 100) : 0;
+    this.dailyChallenge = data.dailyChallenge || false;
+    this.dailyChallengeKey = data.dailyChallengeKey || null;
     this.sprintQuestionsCompleted = 0;
     this.isRunning = false;
     this.isPaused = false;
+    this.manualPause = false;
   }
 
   create() {
     this.cameras.main.setBackgroundColor('#0a0a1a');
+    document.body.classList.add('portrait-running');
+    this.scale.getParentBounds();
+    this.scale.refresh();
+    this.events.once('shutdown', () => {
+      this.portraitUI?.destroy();
+      document.body.classList.remove('portrait-running');
+      this.scale.getParentBounds();
+      this.scale.refresh();
+    });
 
     // ── Systems ──
     this.laneSystem = new LaneSystem(this);
@@ -51,6 +72,13 @@ export default class GameScene extends Phaser.Scene {
     // Sprint mode settings
     if (this.mode === 'sprint') {
       this.spawnSystem.setGateDistance(400); // gates spawn every 400m for high question density
+    } else if (this.mode === 'practice') {
+      this.spawnSystem.setGateDistance(300);
+      this.spawnSystem.setObstacleSpawning(false);
+      this.zoneSystem.lockToChapter(this.practiceChapter);
+    } else if (this.mode === 'bossTraining') {
+      this.spawnSystem.setObstacleSpawning(false);
+      this.zoneSystem.lockToChapter(this.practiceChapter);
     }
 
     // Listen for zone changes
@@ -98,6 +126,10 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.mode === 'sprint') {
       this.hud.setSprintMode(this.sprintDuration, this.targetQuestions);
+    } else if (this.mode === 'practice') {
+      this.hud.setPracticeMode(this.practiceChapterName, this.targetQuestions, this.practiceTopic);
+    } else if (this.mode === 'bossTraining') {
+      this.hud.setBossTrainingMode(this.practiceChapterName, this.targetQuestions);
     }
 
     // ── Particle Emitters for Polish ──
@@ -128,6 +160,19 @@ export default class GameScene extends Phaser.Scene {
       onSlide: () => { if (!this.isPaused) this.player.slide(); },
       onPause: () => this.togglePause()
     });
+    this.portraitUI = new PortraitRunnerUI({
+      onLeft: () => this.inputManager.callbacks.onLeft?.(),
+      onRight: () => this.inputManager.callbacks.onRight?.(),
+      onJump: () => this.inputManager.callbacks.onJump?.(),
+      onSlide: () => this.inputManager.callbacks.onSlide?.(),
+      onPause: () => this.togglePause(),
+      onLane: lane => { if (!this.isPaused) this.player.moveToLane(lane); },
+      onQuit: () => this.handleGameOver('RUN ABORTED')
+    });
+    this.events.on('mathgate-activated', ({ question, options }) => {
+      this.portraitUI.showGate(question, options, this.player.currentLane);
+    });
+    this.events.on('mathgate-deactivated', () => this.portraitUI.hideGate());
 
     // ── Pause overlay ──
     this.createPauseOverlay();
@@ -162,9 +207,25 @@ export default class GameScene extends Phaser.Scene {
     // Boss events (from BossScene)
     this.events.on('boss-defeated', (reward) => {
       this.scoreSystem.addBossDefeat(reward || 500);
+      if (this.isBossTraining) {
+        this.isRunning = false;
+        this.inputManager.disable();
+        audioManager.stopBGM();
+        this.scene.stop('BossScene');
+        this.showResultsScreen(false, 'BOSS TRAINING COMPLETE');
+        return;
+      }
       this.resumeFromBoss();
     });
     this.events.on('boss-failed', () => {
+      if (this.isBossTraining) {
+        this.isRunning = false;
+        this.inputManager.disable();
+        audioManager.stopBGM();
+        this.scene.stop('BossScene');
+        this.showResultsScreen(true, 'BOSS TRAINING FAILED');
+        return;
+      }
       this.resumeFromBoss();
     });
 
@@ -181,6 +242,8 @@ export default class GameScene extends Phaser.Scene {
     // ── Start ──
     this.isRunning = true;
     this.isPaused = false;
+    this.lastPortraitHudUpdate = -Infinity;
+    if (this.isBossTraining) this.time.delayedCall(500, () => this.triggerBoss());
 
     // Initial HUD
     this.hud.updateShields(this.player.shields);
@@ -196,9 +259,7 @@ export default class GameScene extends Phaser.Scene {
     
     // Initial color
     this.cameras.main.setBackgroundColor(initialZone.bgColor);
-    if (this.runnerSystem.neonLine) {
-      this.runnerSystem.neonLine.setTint(initialZone.accentHex);
-    }
+    this.runnerSystem.setZoneTheme(initialZone, false);
   }
 
   update(time, delta) {
@@ -225,6 +286,17 @@ export default class GameScene extends Phaser.Scene {
     this.hud.updateDistance(distance);
     this.hud.updateScore(this.scoreSystem.getDisplayScore());
     this.hud.updateCoins(this.scoreSystem.totalCoins);
+    if (time - this.lastPortraitHudUpdate >= 200) {
+      this.lastPortraitHudUpdate = time;
+      const zone = this.zoneSystem.getCurrentZone();
+      const progress = this.hud.sprintProgressText.visible
+        ? this.hud.sprintProgressText.text
+        : `ZONE 0${zone.id} • ${zone.nameEn.toUpperCase()}`;
+      this.portraitUI.updateHud({
+        distance, shields: this.player.shields, score: this.scoreSystem.getDisplayScore(), progress
+      });
+      if (this.mathGate.active) this.portraitUI.updateGate(this.mathGate.isCalculationPaused, this.player.currentLane);
+    }
 
     // ── Sprint Mode Countdown Timer ──
     if (this.mode === 'sprint') {
@@ -245,8 +317,12 @@ export default class GameScene extends Phaser.Scene {
     if (this.mathGate && this.mathGate.isAtPlayerLevel()) {
       this.mathGate.checked = true;
       const result = this.mathGate.checkAnswer(this.player.currentLane);
+      const answerResult = this.questionSystem.validateAnswer(
+        this.mathGate.currentQuestion.id,
+        result.selectedAnswerIndex
+      );
 
-      if (result.correct) {
+      if (answerResult.correct) {
         audioManager.playCorrect();
         this.sparkEmitter.setParticleTint(0x00ff88);
         this.sparkEmitter.explode(18, this.player.x, this.player.y);
@@ -264,41 +340,42 @@ export default class GameScene extends Phaser.Scene {
         this.comboSystem.reset();
         this.scoreSystem.addWrongAnswer(-50);
         this.difficultySystem.recordAnswer(false);
-        this.player.takeDamage();
         this.hud.showWrong();
         this.mathGate.showResult(false);
       }
 
       this.hud.updateCombo(this.comboSystem.getCurrentCombo(), this.comboSystem.getMultiplier());
-      const explanation = this.mathGate.currentQuestion.explanation || '';
-      if (explanation) {
-        this.mathGateUI.showExplanation(explanation, 2500);
-      }
+      this.recordQuestionProgress();
 
-      // Track progress in Sprint mode
-      if (this.mode === 'sprint') {
-        this.sprintQuestionsCompleted++;
-        this.hud.updateSprintProgress(this.sprintQuestionsCompleted, this.targetQuestions);
-        if (this.sprintQuestionsCompleted >= this.targetQuestions) {
-          this.time.delayedCall(1200, () => {
-            this.handleSprintFinish("EXAM COMPLETED!");
-          });
-        }
+      if (answerResult.correct) {
+        this.time.delayedCall(700, () => this.finishGateFeedback());
+      } else {
+        this.pauseForAnswerFeedback();
+        const portraitFeedback = this.portraitUI.isActive();
+        let feedbackHandled = false;
+        const continueAfterFeedback = () => {
+          if (feedbackHandled) return;
+          feedbackHandled = true;
+          this.mathGateUI.hideFeedback();
+          this.portraitUI.hideModal();
+          if (this.mode !== 'practice') {
+            this.player.takeDamage();
+          }
+          this.finishGateFeedback();
+        };
+        this.portraitUI.showWrongFeedback(answerResult, continueAfterFeedback, portraitFeedback);
+        if (!portraitFeedback) this.mathGateUI.showWrongAnswer(answerResult, continueAfterFeedback);
       }
-
-      // Deactivate gate after brief delay and restore speed
-      this.time.delayedCall(700, () => {
-        this.mathGate.deactivate();
-        this.runnerSystem.resetSpeedMultiplier();
-      });
     }
 
     // ── Spawn new gate? ──
     if (this.spawnSystem.shouldSpawnGate(distance) && !this.mathGate.active) {
       const range = this.difficultySystem.getDifficultyRange();
       // In Sprint mode, questions test all Form 5 topics (chapter = null)
-      const chapter = (this.mode === 'sprint') ? null : this.zoneSystem.getCurrentChapter();
-      const question = this.questionSystem.getRandomQuestion(chapter, range.min, range.max);
+      const chapter = this.mode === 'sprint'
+        ? null
+        : (this.mode === 'practice' ? this.practiceChapter : this.zoneSystem.getCurrentChapter());
+      const question = this.questionSystem.getRandomQuestion(chapter, range.min, range.max, this.practiceTopic);
       if (question) {
         this.runnerSystem.setSpeedMultiplier(0); // Auto pause runner when question appears
         this.spawnSystem.spawnMathGate(question, speed);
@@ -306,7 +383,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ── Boss trigger? ──
-    if (this.spawnSystem.shouldTriggerBoss(distance)) {
+    if (this.mode !== 'practice' && this.spawnSystem.shouldTriggerBoss(distance)) {
       this.spawnSystem.markBossTriggered();
       this.triggerBoss();
     }
@@ -329,13 +406,51 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  recordQuestionProgress() {
+    if (this.mode !== 'sprint' && this.mode !== 'practice') return;
+    this.sprintQuestionsCompleted++;
+    this.hud.updateSprintProgress(this.sprintQuestionsCompleted, this.targetQuestions);
+  }
+
+  pauseForAnswerFeedback() {
+    this.isPaused = true;
+    this.physics.pause();
+    this.runnerSystem.pause();
+    this.inputManager.disable();
+  }
+
+  finishGateFeedback() {
+    this.portraitUI.hideModal();
+    this.portraitUI.hideGate();
+    this.mathGate.deactivate();
+    this.spawnSystem.resumeAfterGate();
+    this.runnerSystem.resetSpeedMultiplier();
+
+    if ((this.mode === 'sprint' || this.mode === 'practice') && this.sprintQuestionsCompleted >= this.targetQuestions) {
+      this.isPaused = false;
+      this.handleSprintFinish(this.mode === 'practice' ? 'PRACTICE COMPLETE!' : 'EXAM COMPLETED!');
+      return;
+    }
+
+    if (this.player.isDead) {
+      this.isPaused = false;
+      this.handleGameOver();
+      return;
+    }
+
+    if (this.isPaused) {
+      this.physics.resume();
+      this.runnerSystem.resume();
+      this.inputManager.enable();
+      this.isPaused = false;
+    }
+  }
+
   // ── Collision handlers ──
 
   onZoneChanged(zone) {
     this.cameras.main.setBackgroundColor(zone.bgColor);
-    if (this.runnerSystem.neonLine) {
-      this.runnerSystem.neonLine.setTint(zone.accentHex);
-    }
+    this.runnerSystem.setZoneTheme(zone, true);
     audioManager.setZoneKey(zone.id);
     const lang = localStorage.getItem('CYE_MATH_RUNNER_LANGUAGE') || 'en';
     this.hud.updateZone(zone, lang);
@@ -343,6 +458,30 @@ export default class GameScene extends Phaser.Scene {
     const g = (zone.accentHex >> 8) & 0xff;
     const b = zone.accentHex & 0xff;
     this.cameras.main.flash(400, r, g, b, true);
+    this.showZoneTransition(zone, lang);
+  }
+
+  showZoneTransition(zone, lang) {
+    const title = lang === 'bm' ? zone.nameBm : zone.nameEn;
+    const banner = this.add.container(640, 350).setDepth(180).setScrollFactor(0).setAlpha(0).setScale(0.82);
+    const glow = this.add.rectangle(0, 0, 720, 150, 0x030614, 0.92)
+      .setStrokeStyle(3, zone.accentHex, 1);
+    const chapter = this.add.text(0, -34, `ENTERING CHAPTER ${zone.chapter}`, {
+      fontSize: '17px', fontFamily: "'Orbitron', sans-serif", color: zone.labelColor, fontStyle: 'bold'
+    }).setOrigin(0.5);
+    const name = this.add.text(0, 18, title.toUpperCase(), {
+      fontSize: '39px', fontFamily: "'Orbitron', sans-serif", color: '#ffffff', fontStyle: 'bold',
+      stroke: zone.labelColor, strokeThickness: 2
+    }).setOrigin(0.5);
+    const motif = this.add.text(0, 58, zone.motifs.join('  •  '), {
+      fontSize: '16px', fontFamily: "'Fira Code', monospace", color: zone.labelColor
+    }).setOrigin(0.5);
+    banner.add([glow, chapter, name, motif]);
+    this.tweens.add({
+      targets: banner, alpha: 1, scaleX: 1, scaleY: 1, duration: 350, ease: 'Back.easeOut',
+      hold: 1400, yoyo: true,
+      onComplete: () => banner.destroy(true)
+    });
   }
 
   hitObstacle(player, obstacle) {
@@ -352,7 +491,9 @@ export default class GameScene extends Phaser.Scene {
       obstacle.deactivate();
       return;
     }
-    if (obstacle.obstacleType === 'low' && !player.body.blocked.down) {
+    const isClearlyAirborne = player.isJumping || player.y < player.GROUND_Y - 52;
+    if (obstacle.obstacleType === 'low' && isClearlyAirborne) {
+      obstacle.deactivate();
       return;
     }
     if (!player.isInvincible) {
@@ -445,17 +586,20 @@ export default class GameScene extends Phaser.Scene {
   }
 
   togglePause() {
-    if (!this.isRunning) return;
-    this.isPaused = !this.isPaused;
-    if (this.isPaused) {
+    if (!this.isRunning || (this.isPaused && !this.manualPause)) return;
+    this.manualPause = !this.manualPause;
+    this.isPaused = this.manualPause;
+    if (this.manualPause) {
       this.physics.pause();
       this.runnerSystem.pause();
       this.pauseOverlay.setVisible(true);
+      this.portraitUI.showPause(this.portraitUI.isActive());
       audioManager.stopBGM();
     } else {
       this.physics.resume();
       this.runnerSystem.resume();
       this.pauseOverlay.setVisible(false);
+      this.portraitUI.hideModal();
       audioManager.startBGM(125);
     }
   }
@@ -508,7 +652,7 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  handleGameOver() {
+  handleGameOver(reason = 'SHIELDS DEPLETED') {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.physics.pause();
@@ -517,14 +661,14 @@ export default class GameScene extends Phaser.Scene {
     audioManager.stopBGM();
     audioManager.playGameOver();
 
-    const gameOverText = this.add.text(640, 360, 'GAME OVER', {
+    const gameOverText = this.add.text(640, 360, reason === 'RUN ABORTED' ? 'RUN ENDED' : 'GAME OVER', {
       fontSize: '68px', fontFamily: "'Orbitron', sans-serif", color: '#ff0044', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6
     }).setOrigin(0.5).setDepth(200).setScrollFactor(0);
 
     this.time.delayedCall(1500, () => {
       gameOverText.destroy();
-      this.showResultsScreen(true, 'SHIELDS DEPLETED');
+      this.showResultsScreen(true, reason);
     });
   }
 
@@ -546,6 +690,15 @@ export default class GameScene extends Phaser.Scene {
     const stats = {
       mode: this.mode,
       isSprint: this.mode === 'sprint',
+      isPractice: this.mode === 'practice' || this.isBossTraining,
+      isBossTraining: this.isBossTraining,
+      practiceChapter: this.practiceChapter,
+      practiceChapterName: this.practiceChapterName,
+      practiceTopic: this.practiceTopic,
+      topicAccuracyBefore: this.topicAccuracyBefore,
+      topicStats: this.practiceTopic ? this.questionSystem.getTopicStats(this.practiceChapter, this.practiceTopic) : null,
+      dailyChallenge: this.dailyChallenge,
+      dailyChallengeKey: this.dailyChallengeKey,
       finishReason: reason,
       isGameOver: isGameOver,
       distance: this.runnerSystem.getDistanceMetres(),
@@ -561,6 +714,9 @@ export default class GameScene extends Phaser.Scene {
       targetQuestions: this.targetQuestions,
       spmGrade: spmGrade,
       chapterStats: this.questionSystem.getChapterStats(),
+      mastery: this.questionSystem.getMasteryProgress(),
+      masteryBefore: this.masteryBefore,
+      mistakes: this.questionSystem.getMistakes(),
       scoreBreakdown: this.scoreSystem.getStats()
     };
 

@@ -40,7 +40,10 @@ questions.forEach((q, index) => {
   ids.add(q.id);
 
   // 7. All required fields present
-  const requiredFields = ['id', 'chapter', 'topic', 'difficulty', 'type', 'question', 'options', 'answer', 'explanation'];
+  const isMatrixRepair = q.type === 'matrixRepair';
+  const requiredFields = isMatrixRepair
+    ? ['id', 'chapter', 'topic', 'difficulty', 'type', 'question', 'answerValue', 'explanation']
+    : ['id', 'chapter', 'topic', 'difficulty', 'type', 'question', 'options', 'answer', 'explanation'];
   for (const field of requiredFields) {
     assert(q[field] !== undefined && q[field] !== null, `${qStr}: Has field '${field}'`);
   }
@@ -54,7 +57,11 @@ questions.forEach((q, index) => {
   }
 
   // 1. answer index exists within options array (0 <= answer < options.length)
-  if (Array.isArray(q.options)) {
+  if (isMatrixRepair) {
+    assert(q.chapter === 2 && q.bossOnly === true && q.bossEligible === true, `${qStr}: Matrix repair is boss-only in chapter 2`);
+    assert(typeof q.answerValue === 'string' && /^-?\d{1,3}$/.test(q.answerValue), `${qStr}: Has a numeric repair answer`);
+    assert(typeof q.hint === 'string' && q.hint.trim() !== '', `${qStr}: Has a repair hint`);
+  } else if (Array.isArray(q.options)) {
     assert(q.answer >= 0 && q.answer < q.options.length, `${qStr}: Answer index ${q.answer} is within options range`);
     
     // 2. Exactly 4 options per question

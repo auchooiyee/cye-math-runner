@@ -22,6 +22,8 @@ export default class RunnerSystem {
     this.ground = null;
     this.groundPhysics = null;
     this.neonLine = null;
+    this.zoneVisuals = null;
+    this.zoneElements = [];
   }
 
   create() {
@@ -91,6 +93,13 @@ export default class RunnerSystem {
       layer.tilePositionX += effectiveSpeed * deltaSeconds * layer.scrollSpeed;
     });
 
+    this.zoneElements.forEach((element, index) => {
+      element.x -= effectiveSpeed * deltaSeconds * element.moveFactor;
+      element.y = element.baseY + Math.sin(time * 0.0015 + index) * element.bobAmount;
+      element.rotation += element.rotationSpeed * deltaSeconds;
+      if (element.x < -180) element.x = GAME_WIDTH + 180;
+    });
+
     // Speed increment
     this.speedTimer += delta;
     if (this.speedTimer >= this.INCREMENT_INTERVAL) {
@@ -126,7 +135,63 @@ export default class RunnerSystem {
     this.speedMultiplier = 1;
   }
 
+  setZoneTheme(zone, animate = true) {
+    this.bgLayers.forEach((layer, index) => {
+      layer.setTint(zone.tintHex || 0xffffff);
+      layer.setAlpha(index === 0 ? 0.9 : 0.78 + index * 0.08);
+    });
+    this.ground.setTint(zone.tintHex || 0xffffff);
+    this.neonLine.setTint(zone.accentHex);
+
+    const previous = this.zoneVisuals;
+    const container = this.scene.add.container(0, 0).setDepth(-7).setAlpha(animate ? 0 : 1);
+    const wash = this.scene.add.rectangle(GAME_WIDTH / 2, 350, GAME_WIDTH, 540, zone.accentHex, 0.045);
+    container.add(wash);
+
+    const elements = [];
+    for (let i = 0; i < 12; i++) {
+      const motif = zone.motifs[i % zone.motifs.length];
+      const text = this.scene.add.text(80 + i * 125, 175 + (i % 4) * 105, motif, {
+        fontSize: `${22 + (i % 3) * 5}px`,
+        fontFamily: "'Fira Code', Consolas, monospace",
+        color: zone.labelColor,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setAlpha(0.12 + (i % 3) * 0.035);
+      text.baseY = text.y;
+      text.bobAmount = 6 + (i % 3) * 4;
+      text.moveFactor = 0.035 + (i % 4) * 0.012;
+      text.rotationSpeed = zone.key === 'transformations' ? (i % 2 ? 0.08 : -0.08) : 0;
+      elements.push(text);
+      container.add(text);
+    }
+
+    const horizon = this.scene.add.graphics();
+    horizon.lineStyle(2, zone.accentHex, 0.16);
+    for (let y = 260; y <= 560; y += 75) {
+      horizon.lineBetween(0, y, GAME_WIDTH, y);
+    }
+    container.addAt(horizon, 1);
+
+    this.zoneVisuals = container;
+    this.zoneElements = elements;
+    if (animate) {
+      this.scene.tweens.add({ targets: container, alpha: 1, duration: 900, ease: 'Sine.easeOut' });
+      if (previous) {
+        this.scene.tweens.add({
+          targets: previous, alpha: 0, duration: 600,
+          onComplete: () => previous.destroy(true)
+        });
+      }
+    } else if (previous) {
+      previous.destroy(true);
+    }
+  }
+
   destroy() {
     this.bgLayers = [];
+    this.zoneElements = [];
+    this.zoneVisuals?.destroy(true);
   }
 }
