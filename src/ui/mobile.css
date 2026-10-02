@@ -47,6 +47,34 @@
 .portrait-screen .matrix-equation, .portrait-runner .matrix-equation { display: block; max-width: 100%; overflow-x: auto; white-space: nowrap; font: 500 clamp(16px, 5vw, 22px) 'Cambria Math', 'STIX Two Math', serif; text-align: center; }
 .portrait-screen .matrix-equation math, .portrait-runner .matrix-equation math { margin: 0 .15em; vertical-align: middle; }
 
+.player-name-dialog {
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: 22px;
+  overflow-y: auto;
+  border: 2px solid #00eaff;
+  border-radius: 14px;
+  color: #fff;
+  background: #091a36;
+  box-shadow: 0 18px 70px #000b;
+  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+  touch-action: pan-y;
+  user-select: text;
+}
+.player-name-dialog::backdrop { background: #020716d9; }
+.player-name-dialog h2 { margin: 0 0 12px; color: #ffcc00; font: 800 clamp(19px, 5vw, 23px) 'Orbitron', sans-serif; text-align: center; }
+.player-name-dialog p { margin: 0 0 12px; font-size: 18px; line-height: 1.25; text-align: center; }
+.player-name-dialog .player-name-note { color: #b9d2ed; font-size: 16px; }
+.player-name-dialog .player-name-suggestion { display: block; margin: 10px 0; color: #00ffcc; font: 800 25px 'Rajdhani', sans-serif; text-align: center; }
+.player-name-dialog button { display: block; width: 100%; min-height: 48px; margin: 8px 0; padding: 8px; border: 2px solid #00eaff; border-radius: 9px; color: #fff; background: #123157; font: 700 18px 'Rajdhani', sans-serif; cursor: pointer; touch-action: manipulation; }
+.player-name-dialog .player-name-primary { background: #075451; }
+.player-name-dialog .player-name-cancel { border-color: #ffcc00; background: #302f29; }
+.player-name-dialog label { display: block; margin-top: 16px; font-size: 18px; font-weight: 700; }
+.player-name-dialog input { box-sizing: border-box; width: 100%; min-height: 48px; margin-top: 5px; padding: 8px 10px; border: 2px solid #74a6c7; border-radius: 8px; color: #fff; background: #071126; font: 18px 'Rajdhani', sans-serif; user-select: text; }
+.player-name-dialog .player-name-error { min-height: 20px; margin: 4px 0 0; color: #ff8da0; font-size: 16px; }
+.player-name-dialog button:focus-visible, .player-name-dialog input:focus-visible { outline: 3px solid #ffea6c; outline-offset: 2px; }
+
 .portrait-runner { display: none; }
 @media (orientation: portrait) and (max-width: 900px) {
   .portrait-runner { display: block; }

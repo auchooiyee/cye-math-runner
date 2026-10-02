@@ -119,6 +119,15 @@ export function getPlayerName() {
   return 'PLAYER';
 }
 
+export function hasPlayerName() {
+  try {
+    return Boolean(localStorage.getItem('CYE_MATH_RUNNER_PLAYER_NAME')?.trim());
+  } catch (e) {
+    console.warn('Failed to check player name in localStorage', e);
+    return false;
+  }
+}
+
 export function savePlayerName(name) {
   try {
     localStorage.setItem('CYE_MATH_RUNNER_PLAYER_NAME', name);

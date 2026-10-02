@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { getLanguage, saveLanguage, getPlayerName, savePlayerName, getSetting } from '../utils/Storage.js';
+import { getLanguage, saveLanguage, getPlayerName, hasPlayerName, savePlayerName, getSetting } from '../utils/Storage.js';
 import audioManager from '../utils/AudioManager.js';
 import PortraitScreen, { mobileButton } from '../ui/PortraitScreen.js';
+import { showPlayerNameDialog } from '../ui/PlayerNameDialog.js';
 
 export default class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -87,19 +88,40 @@ export default class MainMenuScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
+        // Ask only once. A suggested nickname lets younger players continue without typing.
+        let nameCard;
+        let portraitNameButton;
+        const nameLabel = () => hasPlayerName() ? getPlayerName().toUpperCase() : 'CHOOSE NAME';
+        const refreshName = () => {
+            nameCard?.setText(`🎮 PILOT: ${nameLabel()}`);
+            if (portraitNameButton) portraitNameButton.textContent = `PILOT: ${nameLabel()}`;
+        };
+        const chooseName = (next, editing = false) => {
+            showPlayerNameDialog(this, (name) => {
+                savePlayerName(name);
+                refreshName();
+                next?.();
+            }, editing && hasPlayerName() ? getPlayerName() : '');
+        };
+        const withName = (next) => {
+            if (hasPlayerName()) next();
+            else chooseName(next);
+        };
+
         // Buttons
         const startGame = () => {
-            if (getSetting('tutorialComplete', false)) {
-                this.scene.start('ModeSelectScene');
-            } else {
-                this.scene.start('TutorialScene', { nextScene: 'ModeSelectScene' });
-            }
+            withName(() => {
+                if (getSetting('tutorialComplete', false)) {
+                    this.scene.start('ModeSelectScene');
+                } else {
+                    this.scene.start('TutorialScene', { nextScene: 'ModeSelectScene' });
+                }
+            });
         };
+        const openMastery = () => withName(() => this.scene.start('MasteryScene'));
         this.createButton(width / 2, 350, 'PLAY GAME', startGame);
 
-        this.createButton(width / 2, 420, 'MASTERY DASHBOARD', () => {
-            this.scene.start('MasteryScene');
-        });
+        this.createButton(width / 2, 420, 'MASTERY DASHBOARD', openMastery);
 
         this.createButton(width / 2, 490, 'LEADERBOARD', () => {
             this.scene.start('LeaderboardScene');
@@ -146,8 +168,7 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         // Pilot Name badge
-        const playerName = getPlayerName() || 'PILOT';
-        const nameCard = this.add.text(width / 2, 690, `🎮 PILOT: ${playerName.toUpperCase()}`, {
+        nameCard = this.add.text(width / 2, 690, `🎮 PILOT: ${nameLabel()}`, {
             fontSize: '18px',
             fontFamily: '"Rajdhani", "Orbitron", sans-serif',
             fontStyle: 'bold',
@@ -156,13 +177,7 @@ export default class MainMenuScene extends Phaser.Scene {
             padding: { x: 16, y: 6 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-        nameCard.on('pointerdown', () => {
-            const newName = prompt('Choose a nickname (not your real name):', playerName);
-            if (newName) {
-                savePlayerName(newName);
-                nameCard.setText(`🎮 PILOT: ${newName.toUpperCase()}`);
-            }
-        });
+        nameCard.on('pointerdown', () => chooseName(null, true));
 
         // Version
         this.add.text(12, height - 15, 'v0.6 — SPM Arcade Edition • Form 5 MathVerse', {
@@ -173,18 +188,11 @@ export default class MainMenuScene extends Phaser.Scene {
 
         const portrait = new PortraitScreen(this, 'CYE MATH RUNNER', 'RUN • SOLVE • SURVIVE');
         portrait.addChoice('PLAY GAME', 'Start an endless run, exam sprint, or chapter practice', startGame);
-        portrait.addChoice('MASTERY DASHBOARD', 'Review chapter mastery and weak topics', () => this.scene.start('MasteryScene'));
+        portrait.addChoice('MASTERY DASHBOARD', 'Review chapter mastery and weak topics', openMastery);
         portrait.addChoice('LEADERBOARD', 'See the current rankings', () => this.scene.start('LeaderboardScene'));
         portrait.addChoice('PROGRESS REPORT', 'Review learning progress', () => this.scene.start('ProgressReportScene'));
         portrait.addChoice('HOW TO PLAY', 'Movement, gates, and bosses', () => this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true }));
-        portrait.addChoice(`PILOT: ${playerName.toUpperCase()}`, 'Tap to change your nickname', () => {
-            const updatedName = prompt('Choose a nickname (not your real name):', getPlayerName() || 'PILOT');
-            if (updatedName) {
-                savePlayerName(updatedName);
-                nameCard.setText(`🎮 PILOT: ${updatedName.toUpperCase()}`);
-                portrait.content.lastElementChild.querySelector('button').textContent = `PILOT: ${updatedName.toUpperCase()}`;
-            }
-        });
+        portraitNameButton = portrait.addChoice(`PILOT: ${nameLabel()}`, 'Tap to choose or change your nickname', () => chooseName(null, true));
         portrait.addBack(audioManager.isMuted ? '🔇 SOUND OFF' : '🔊 SOUND ON', () => {
             const muted = audioManager.toggleMute();
             portrait.footer.querySelector('button').textContent = muted ? '🔇 SOUND OFF' : '🔊 SOUND ON';
