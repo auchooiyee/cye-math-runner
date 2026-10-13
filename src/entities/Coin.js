@@ -1,3 +1,4 @@
+import { placeOnTrack } from '../systems/TrackObject.js';
 import Phaser from 'phaser';
 
 const LANE_POSITIONS = [380, 640, 900];
@@ -11,10 +12,8 @@ export default class Coin extends Phaser.Physics.Arcade.Sprite {
     this.body.setAllowGravity(false);
   }
 
-  activate(laneX, startY, speed) {
-    this.enableBody(true, laneX, startY, true, true);
-    this.body.setAllowGravity(false);
-    this.setVelocity(0, speed);
+  activate(laneIndex, extraDistance, speed) {
+    placeOnTrack(this, laneIndex, speed, extraDistance);
   }
 
   deactivate() {

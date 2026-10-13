@@ -23,8 +23,8 @@ const PAGES = [
     {
         kicker: 'MATHEMATICS',
         title: 'SOLVE, THEN CHOOSE',
-        body: 'The run pauses while you calculate. Move into the lane containing the correct answer before the gates arrive.',
-        tips: ['Read during calculation time', 'Choose the answer lane', 'Correct answers build combos'],
+        body: 'The runner stops at each learning checkpoint. Start with 60 seconds and add 30 seconds whenever you need more time. Review the method, then continue running.',
+        tips: ['Tap +30s for more thinking time', 'Choose an option, then confirm', 'Read the explanation, then continue'],
         color: 0x00ff88
     },
     {
@@ -37,8 +37,8 @@ const PAGES = [
     {
         kicker: 'BOSSES',
         title: 'MASTER EACH CHAPTER',
-        body: 'Chapter bosses use their own question pools, attacks, and phases. Correct answers damage the boss.',
-        tips: ['Build accuracy before a boss', 'Learn from every missed attack', 'Defeat all eight chapter guardians'],
+        body: 'Academy guardians host chapter practice simulations. Each correct answer clears one challenge segment.',
+        tips: ['Build accuracy before a boss', 'Learn from every missed attack', 'Complete all eight guardian challenges'],
         color: 0xff00ff
     }
 ];
@@ -59,7 +59,7 @@ export default class TutorialScene extends Phaser.Scene {
         this.add.image(width / 2, height / 2, 'bg-layer-1').setDisplaySize(width, height).setAlpha(0.45);
         this.add.rectangle(width / 2, height / 2, width, height, 0x030614, 0.78);
 
-        this.add.text(width / 2, 48, 'PILOT TRAINING', {
+        this.add.text(width / 2, 48, 'ACADEMY TRAINING', {
             fontSize: '34px', fontFamily: "'Orbitron', sans-serif", color: '#ffcc00', fontStyle: 'bold'
         }).setOrigin(0.5);
         this.pageCounter = this.add.text(width / 2, 88, '', {
@@ -74,7 +74,7 @@ export default class TutorialScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-LEFT', () => this.changePage(-1));
         this.input.keyboard.on('keydown-RIGHT', () => this.changePage(1));
         this.input.keyboard.on('keydown-ENTER', () => this.pageIndex === PAGES.length - 1 ? this.finish() : this.changePage(1));
-        this.portrait = new PortraitScreen(this, 'PILOT TRAINING', 'Learn the controls before you run');
+        this.portrait = new PortraitScreen(this, 'ACADEMY TRAINING', 'Learn the controls before you run');
         this.renderPage();
     }
 
@@ -113,7 +113,7 @@ export default class TutorialScene extends Phaser.Scene {
         this.previousButton.setAlpha(this.pageIndex === 0 ? 0.3 : 1);
         this.nextButton.list[1].setText(this.pageIndex === PAGES.length - 1 ? 'START PLAYING ▶' : 'NEXT ▶');
 
-        this.portrait.setHeader('PILOT TRAINING', `${this.pageIndex + 1} / ${PAGES.length} • ${page.kicker}`);
+        this.portrait.setHeader('ACADEMY TRAINING', `${this.pageIndex + 1} / ${PAGES.length} • ${page.kicker}`);
         this.portrait.clear();
         const portraitCard = mobileElement('div', 'portrait-card');
         portraitCard.append(mobileElement('h2', '', page.title), mobileElement('p', '', page.body));

@@ -80,7 +80,7 @@ export const UI_TEXT = {
   en: {
     title: 'CYE MATH RUNNER',
     subtitle: 'SPM FINAL RUN',
-    tagline: 'RUN • SOLVE • SURVIVE',
+    tagline: 'LEARN • PRACTICE • RUN • GROW',
     play: 'PLAY',
     leaderboard: 'LEADERBOARD',
     back: 'BACK',
@@ -125,7 +125,7 @@ export const UI_TEXT = {
   bm: {
     title: 'CYE MATH RUNNER',
     subtitle: 'SPM FINAL RUN',
-    tagline: 'LARI • SELESAI • BERTAHAN',
+    tagline: 'BELAJAR • BERLATIH • BERLARI • BERKEMBANG',
     play: 'MAIN',
     leaderboard: 'PAPAN PENDAHULU',
     back: 'KEMBALI',

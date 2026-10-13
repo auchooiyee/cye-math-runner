@@ -1,11 +1,10 @@
+import { renderTrackObject } from './TrackObject.js';
+import { crossedRunner, occupiesLane } from './TrackGeometry.js';
 import Obstacle from '../entities/Obstacle.js';
 import Coin from '../entities/Coin.js';
 import PowerUp from '../entities/PowerUp.js';
 import MathGate from '../entities/MathGate.js';
 import { buildObstaclePattern, hasApproachTime } from './ObstaclePatterns.js';
-
-const LANE_POSITIONS = [380, 640, 900];
-const GROUND_Y = 620;
 
 const SPAWN = {
   OBSTACLE_MIN_INTERVAL: 2300,
@@ -118,14 +117,14 @@ export default class SpawnSystem {
     }
 
     // Spawn coins
-    if (this.coinTimer >= this.nextCoinInterval) {
+    if (!isGateActive && this.coinTimer >= this.nextCoinInterval) {
       this.coinTimer = 0;
       this.nextCoinInterval = this.randomInterval(SPAWN.COIN_MIN_INTERVAL, SPAWN.COIN_MAX_INTERVAL);
       this.spawnCoinPattern(speed);
     }
 
     // Spawn power-ups
-    if (this.powerUpTimer >= this.nextPowerUpInterval) {
+    if (!isGateActive && this.powerUpTimer >= this.nextPowerUpInterval) {
       this.powerUpTimer = 0;
       this.nextPowerUpInterval = this.randomInterval(SPAWN.POWERUP_MIN_INTERVAL, SPAWN.POWERUP_MAX_INTERVAL);
       this.spawnPowerUp(speed);
@@ -133,11 +132,10 @@ export default class SpawnSystem {
 
     // Update math gate
     if (this.mathGate) {
-      this.mathGate.update();
+      this.mathGate.update(delta);
     }
 
-    // Recycle off-screen objects (scrolled past bottom)
-    this.recycleOffScreen();
+    this.advanceTrackObjects(delta, speed);
   }
 
   spawnObstaclePattern(speed) {
@@ -168,13 +166,12 @@ export default class SpawnSystem {
   spawnCoinPattern(speed) {
     const lane = Math.floor(Math.random() * 3);
     const count = 3 + Math.floor(Math.random() * 3); // 3-5 coins
-    const laneX = LANE_POSITIONS[lane];
 
     for (let i = 0; i < count; i++) {
       const inactive = this.coinPool.find(c => !c.active);
       if (!inactive) break;
-      // Stagger coins vertically so they appear as a line
-      inactive.activate(laneX, -50 - (i * 40), speed);
+      // Space coins along the road, never along the screen Y axis.
+      inactive.activate(lane, i * 90, speed);
     }
   }
 
@@ -204,6 +201,7 @@ export default class SpawnSystem {
     this.obstaclePool.forEach(o => {
       if (o.active) o.deactivate();
     });
+    [...this.coinPool, ...this.powerUpPool].forEach(object => object.deactivate());
     this.mathGate.activate(question, speed);
     this.lastGateDistance += this.gateDistance;
   }
@@ -212,17 +210,29 @@ export default class SpawnSystem {
     this.lastBossDistance += this.bossDistance;
   }
 
-  recycleOffScreen() {
-    // Objects that scrolled past the bottom of the screen (y > 800)
-    this.obstaclePool.forEach(o => {
-      if (o.active && o.y > 800) o.deactivate();
-    });
-    this.coinPool.forEach(c => {
-      if (c.active && c.y > 800) c.deactivate();
-    });
-    this.powerUpPool.forEach(p => {
-      if (p.active && p.y > 800) p.deactivate();
-    });
+  advanceTrackObjects(delta, speed) {
+    const player = this.scene.player;
+    const magnet = this.scene.powerUpSystem.isActive('coin_magnet');
+    for (const pool of [this.obstaclePool, this.coinPool, this.powerUpPool]) {
+      for (const object of pool) {
+        if (!object.active) continue;
+        const previousZ = object.worldZ;
+        object.worldZ -= speed * delta / 1000;
+        renderTrackObject(object);
+        const isCoin = pool === this.coinPool;
+        const atRunner = crossedRunner(previousZ, object.worldZ);
+        const magnetPickup = isCoin && magnet && object.worldZ <= 120 && object.worldZ > 0;
+        if (!object.passedRunner && (atRunner || magnetPickup)) {
+          object.passedRunner = true;
+          if (!player.isDead && (occupiesLane(player.x, object.lane) || magnetPickup)) {
+            if (pool === this.obstaclePool) this.scene.hitObstacle(player, object);
+            else if (isCoin) this.scene.collectCoin(player, object);
+            else this.scene.collectPowerUp(player, object);
+          }
+        }
+        if (object.worldZ < -70) object.deactivate();
+      }
+    }
   }
 
   randomInterval(min, max) {

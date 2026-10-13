@@ -71,7 +71,7 @@ export default class PortraitRunnerUI {
         if (this.gate.hidden) return;
         this.gatePrompt.textContent = calculating
             ? 'CALCULATION TIME • choose an answer lane'
-            : 'GATES DESCENDING • confirm your answer lane';
+            : 'GATES APPROACHING • confirm your answer lane';
         [...this.gateChoices.children].forEach((button, lane) => {
             button.setAttribute('aria-pressed', String(lane === selectedLane));
         });
@@ -93,7 +93,7 @@ export default class PortraitRunnerUI {
 
     showPause(forceVisible = false) {
         this.root.dataset.modal = forceVisible ? 'true' : 'false';
-        this.showModal('SYSTEM PAUSED', ['Take a breath, then resume your run.'], [
+        this.showModal('TAKE A BREATHER', ['Take a breath, then resume your run.'], [
             ['RESUME RUN ▶', this.onPause],
             ['ABORT RUN', this.onQuit]
         ]);

@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cye-math-runner-api",
+  "main": "worker/index.js",
+  "account_id": "993cd922d74e91138cc968903dc1b0f3",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cye-math-runner-scores",
+      "database_id": "f06e0e93-da69-46ae-8b8d-d098092c692c",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

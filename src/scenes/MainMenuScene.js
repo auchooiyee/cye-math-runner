@@ -1,239 +1,86 @@
 import Phaser from 'phaser';
 import { getLanguage, saveLanguage, getPlayerName, hasPlayerName, savePlayerName, getSetting } from '../utils/Storage.js';
 import audioManager from '../utils/AudioManager.js';
-import PortraitScreen, { mobileButton } from '../ui/PortraitScreen.js';
 import { showPlayerNameDialog } from '../ui/PlayerNameDialog.js';
+import { mobileElement, mobileButton } from '../ui/PortraitScreen.js';
+import { ACADEMY_LOCATIONS, ACADEMY_STORY } from '../config/academy.js';
+import '../ui/academy.css';
 
 export default class MainMenuScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'MainMenuScene' });
-    }
+    constructor() { super({ key: 'MainMenuScene' }); }
 
     create() {
-        const { width, height } = this.cameras.main;
-
-        // Rich Cyberpunk City Backdrop
-        this.add.image(width / 2, height / 2, 'bg-layer-1').setDisplaySize(width, height).setAlpha(0.65);
-        this.add.rectangle(width / 2, height / 2, width, height, 0x030614, 0.45);
-
-        // Floating ambient cyber particles
-        const particles = this.add.particles(0, 0, 'particle', {
-            x: { min: 0, max: width },
-            y: { min: 0, max: height },
-            quantity: 2,
-            lifespan: 5000,
-            alpha: { start: 0.6, end: 0 },
-            scale: { start: 0.8, end: 0.1 },
-            speedY: { min: -15, max: 15 },
-            speedX: { min: -15, max: 15 },
-        });
-
-        const currentLanguage = getLanguage() || 'en';
-
-        // Main Title with Glowing Neon Aesthetic
-        const titleText = this.add.text(width / 2, 95, 'CYE MATH RUNNER', {
-            fontSize: '52px',
-            fontFamily: '"Orbitron", "Segoe UI", sans-serif',
-            color: '#ffd700',
-            fontStyle: '900',
-            stroke: '#00f0ff',
-            strokeThickness: 3,
-            shadow: { offsetX: 0, offsetY: 0, color: '#ff007f', blur: 15, stroke: true, fill: true }
-        }).setOrigin(0.5);
-
-        this.add.text(width / 2, 148, 'SPM FINAL RUN', {
-            fontSize: '24px',
-            fontFamily: '"Rajdhani", "Orbitron", sans-serif',
-            color: '#00f0ff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        this.add.text(width / 2, 178, 'RUN  •  SOLVE  •  SURVIVE', {
-            fontSize: '16px',
-            fontFamily: '"Rajdhani", "Segoe UI", sans-serif',
-            color: '#ffffff',
-            fontStyle: '600'
-        }).setOrigin(0.5);
-
-        // Cute speech bubble badge (clearly above character, zero overlap)
-        const badge = this.add.text(width / 2, 210, '✨ (◕‿◕✿) READY TO RUN!', {
-            fontSize: '14px',
-            fontFamily: '"Rajdhani", "Segoe UI", sans-serif',
-            color: '#00ffcc',
-            fontStyle: 'bold',
-            backgroundColor: '#060d24',
-            padding: { x: 12, y: 5 }
-        }).setOrigin(0.5);
-
-        // Cute Anime Character Holographic Pedestal (compact, cleanly spaced)
-        const pedestalOuter = this.add.ellipse(width / 2, 320, 56, 16, 0x00f0ff, 0.28);
-        const pedestalInner = this.add.ellipse(width / 2, 320, 36, 10, 0xff007f, 0.38);
-        const playerPreview = this.add.image(width / 2, 272, 'player').setScale(1.35);
-
-        this.tweens.add({
-            targets: playerPreview,
-            y: 265,
-            duration: 1200,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-        this.tweens.add({
-            targets: [pedestalOuter, pedestalInner],
-            scaleX: 0.88,
-            alpha: 0.22,
-            duration: 1200,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-
-        // Ask only once. A suggested nickname lets younger players continue without typing.
-        let nameCard;
-        let portraitNameButton;
-        const nameLabel = () => hasPlayerName() ? getPlayerName().toUpperCase() : 'CHOOSE NAME';
-        const refreshName = () => {
-            nameCard?.setText(`🎮 PILOT: ${nameLabel()}`);
-            if (portraitNameButton) portraitNameButton.textContent = `PILOT: ${nameLabel()}`;
+        const bm = getLanguage() === 'bm';
+        const story = ACADEMY_STORY[bm ? 'bm' : 'en'];
+        const root = mobileElement('main', 'academy-menu');
+        root.setAttribute('aria-label', 'CYE Math Runner');
+        const hero = mobileElement('section', 'academy-hero');
+        const image = document.createElement('img');
+        image.src = 'assets/academy/cover.webp';
+        image.alt = 'CYE Math Runner: a brown-haired student in a blue and white hoodie running through the academy.';
+        image.className = 'academy-cover';
+        const caption = mobileElement('div', 'academy-caption');
+        caption.append(mobileElement('span', 'academy-kicker', bm ? 'SELAMAT DATANG KE AKADEMI CYE' : 'WELCOME TO CYE ACADEMY'), mobileElement('h1', '', story.motto));
+        hero.append(image, caption);
+        const panel = mobileElement('section', 'academy-panel');
+        panel.append(mobileElement('p', 'academy-kicker', story.eyebrow), mobileElement('h2', '', story.title), mobileElement('p', 'academy-intro', story.intro));
+        let nameButton;
+        const nameLabel = () => `${bm ? 'PELARI' : 'RUNNER'}: ${hasPlayerName() ? getPlayerName() : (bm ? 'Pilih nama samaran' : 'Choose a nickname')}`;
+        const chooseName = (next, editing = false) => showPlayerNameDialog(this, name => {
+            savePlayerName(name); nameButton.textContent = nameLabel(); next?.();
+        }, editing && hasPlayerName() ? getPlayerName() : '');
+        const withName = next => hasPlayerName() ? next() : chooseName(next);
+        const nav = mobileElement('nav', 'academy-actions');
+        const action = (label, detail, onClick, primary = false) => {
+            const button = mobileButton('', () => { audioManager.playClick(); onClick(); }, `academy-action ${primary ? 'academy-primary' : ''}`);
+            button.append(mobileElement('strong', '', label), mobileElement('span', '', detail));
+            nav.append(button);
         };
-        const chooseName = (next, editing = false) => {
-            showPlayerNameDialog(this, (name) => {
-                savePlayerName(name);
-                refreshName();
-                next?.();
-            }, editing && hasPlayerName() ? getPlayerName() : '');
-        };
-        const withName = (next) => {
-            if (hasPlayerName()) next();
-            else chooseName(next);
-        };
-
-        // Buttons
-        const startGame = () => {
-            withName(() => {
-                if (getSetting('tutorialComplete', false)) {
-                    this.scene.start('ModeSelectScene');
-                } else {
-                    this.scene.start('TutorialScene', { nextScene: 'ModeSelectScene' });
-                }
-            });
-        };
-        const openMastery = () => withName(() => this.scene.start('MasteryScene'));
-        this.createButton(width / 2, 350, 'PLAY GAME', startGame);
-
-        this.createButton(width / 2, 420, 'MASTERY DASHBOARD', openMastery);
-
-        this.createButton(width / 2, 490, 'LEADERBOARD', () => {
-            this.scene.start('LeaderboardScene');
-        });
-
-        this.createButton(width / 2, 560, 'PROGRESS REPORT', () => {
-            this.scene.start('ProgressReportScene');
-        });
-
-        this.createButton(width / 2, 630, 'HOW TO PLAY', () => {
-            this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true });
-        });
-
-        // Audio toggle button
-        const audioBtn = this.add.text(width - 150, 45, audioManager.isMuted ? '🔇 MUTE' : '🔊 AUDIO', {
-            fontSize: '16px',
-            fontFamily: '"Rajdhani", sans-serif',
-            fontStyle: 'bold',
-            color: '#00f0ff',
-            backgroundColor: '#060d24',
-            padding: { x: 12, y: 6 }
-        }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-
-        audioBtn.on('pointerdown', () => {
-            const muted = audioManager.toggleMute();
-            audioBtn.setText(muted ? '🔇 MUTE' : '🔊 AUDIO');
-            audioManager.playClick();
-        });
-
-        // Language toggle
-        const langText = this.add.text(width - 45, 45, 'EN / BM', {
-            fontSize: '16px',
-            fontFamily: '"Rajdhani", sans-serif',
-            fontStyle: 'bold',
-            color: '#ffffff',
-            backgroundColor: '#060d24',
-            padding: { x: 12, y: 6 }
-        }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-        
-        langText.on('pointerdown', () => {
-            const newLang = getLanguage() === 'en' ? 'bm' : 'en';
-            saveLanguage(newLang);
-            this.scene.restart();
-        });
-
-        // Pilot Name badge
-        nameCard = this.add.text(width / 2, 690, `🎮 PILOT: ${nameLabel()}`, {
-            fontSize: '18px',
-            fontFamily: '"Rajdhani", "Orbitron", sans-serif',
-            fontStyle: 'bold',
-            color: '#00f0ff',
-            backgroundColor: '#08122a',
-            padding: { x: 16, y: 6 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        nameCard.on('pointerdown', () => chooseName(null, true));
-
-        // Version
-        this.add.text(12, height - 15, 'v0.6 — SPM Arcade Edition • Form 5 MathVerse', {
-            fontSize: '13px',
-            fontFamily: '"Rajdhani", sans-serif',
-            color: '#6688aa'
-        }).setOrigin(0, 1);
-
-        const portrait = new PortraitScreen(this, 'CYE MATH RUNNER', 'RUN • SOLVE • SURVIVE');
-        portrait.addChoice('PLAY GAME', 'Start an endless run, exam sprint, or chapter practice', startGame);
-        portrait.addChoice('MASTERY DASHBOARD', 'Review chapter mastery and weak topics', openMastery);
-        portrait.addChoice('LEADERBOARD', 'See the current rankings', () => this.scene.start('LeaderboardScene'));
-        portrait.addChoice('PROGRESS REPORT', 'Review learning progress', () => this.scene.start('ProgressReportScene'));
-        portrait.addChoice('HOW TO PLAY', 'Movement, gates, and bosses', () => this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true }));
-        portraitNameButton = portrait.addChoice(`PILOT: ${nameLabel()}`, 'Tap to choose or change your nickname', () => chooseName(null, true));
-        portrait.addBack(audioManager.isMuted ? '🔇 SOUND OFF' : '🔊 SOUND ON', () => {
-            const muted = audioManager.toggleMute();
-            portrait.footer.querySelector('button').textContent = muted ? '🔇 SOUND OFF' : '🔊 SOUND ON';
-        });
-        portrait.footer.append(mobileButton('EN / BM', () => {
-            const newLang = getLanguage() === 'en' ? 'bm' : 'en';
-            saveLanguage(newLang);
-            this.scene.restart();
-        }, 'portrait-back'));
+        action(bm ? 'MULA BERLARI' : 'LET’S RUN', bm ? 'Larian • Sprint SPM • Latihan' : 'Endless run • SPM sprint • Chapter practice', () => withName(() => {
+            if (getSetting('tutorialComplete', false)) this.scene.start('ModeSelectScene');
+            else this.scene.start('TutorialScene', { nextScene: 'ModeSelectScene' });
+        }), true);
+        action(bm ? 'PENGUASAAN BAB' : 'MY LEARNING', bm ? 'Penguasaan bab dan topik' : 'Chapter mastery & skills to practise', () => withName(() => this.scene.start('MasteryScene')));
+        action(bm ? 'PAPAN PENDAHULU' : 'LEADERBOARD', bm ? 'Raikan usaha setiap pelari' : 'Celebrate the effort. Go a little further.', () => this.scene.start('LeaderboardScene'));
+        action(bm ? 'LAPORAN KEMAJUAN' : 'PROGRESS REPORT', bm ? 'Lihat perkembangan anda' : 'See how your confidence is growing', () => this.scene.start('ProgressReportScene'));
+        panel.append(nav);
+        const links = mobileElement('div', 'academy-links');
+        links.append(mobileButton(bm ? 'Kenali Akademi' : 'Meet the Academy', () => this.showAcademy(bm), 'academy-link'), mobileButton(bm ? 'Cara bermain' : 'How to play', () => this.scene.start('TutorialScene', { nextScene: 'MainMenuScene', replay: true }), 'academy-link'));
+        panel.append(links);
+        const footer = mobileElement('footer', 'academy-settings');
+        nameButton = mobileButton(nameLabel(), () => chooseName(null, true), 'academy-name');
+        const soundLabel = () => audioManager.isMuted ? (bm ? 'Bunyi: Mati' : 'Sound: Off') : (bm ? 'Bunyi: Hidup' : 'Sound: On');
+        const sound = mobileButton(soundLabel(), () => { audioManager.toggleMute(); sound.textContent = soundLabel(); }, 'academy-small');
+        footer.append(nameButton, sound, mobileButton('EN / BM', () => { saveLanguage(bm ? 'en' : 'bm'); this.scene.restart(); }, 'academy-small'));
+        panel.append(footer, mobileElement('p', 'academy-footnote', 'KSSM FORM 5 · SPM FINAL RUN'));
+        root.append(hero, panel);
+        document.body.append(root);
+        this.input.enabled = false;
+        this.events.once('shutdown', () => { this.input.enabled = true; root.remove(); this.academyDialog?.remove(); });
     }
 
-    createButton(x, y, textStr, onClick) {
-        const btn = this.add.container(x, y);
-        const bg = this.add.image(0, 0, 'button').setInteractive({ useHandCursor: true });
-        const txt = this.add.text(0, 0, textStr, {
-            fontSize: '22px',
-            fontFamily: '"Orbitron", "Rajdhani", sans-serif',
-            color: '#ffffff',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
-
-        btn.add([bg, txt]);
-
-        bg.on('pointerover', () => {
-            bg.setTexture('button-hover');
-            this.tweens.add({ targets: btn, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-            txt.setColor('#00f0ff');
+    showAcademy(bm) {
+        const story = ACADEMY_STORY[bm ? 'bm' : 'en'];
+        const dialog = document.createElement('dialog');
+        dialog.className = 'academy-dialog';
+        dialog.setAttribute('aria-labelledby', 'academy-story-title');
+        const close = mobileButton(bm ? 'Kembali ke menu ×' : 'Back to menu ×', () => dialog.close(), 'academy-close');
+        const title = mobileElement('h2', '', story.runner); title.id = 'academy-story-title';
+        const intro = mobileElement('div', 'academy-profile');
+        const portrait = document.createElement('img'); portrait.src = 'assets/academy/runner.webp'; portrait.alt = 'Kai, CYE Academy Runner';
+        const bio = mobileElement('div'); bio.append(title, mobileElement('p', '', story.bio), mobileElement('h3', '', story.guide), mobileElement('p', '', story.guardians));
+        intro.append(portrait, bio);
+        const route = mobileElement('div', 'academy-route');
+        const zones = this.cache.json.get('zones');
+        ACADEMY_LOCATIONS.forEach((place, i) => {
+            const card = mobileElement('article', 'academy-route-card');
+            const photo = document.createElement('img'); photo.src = `assets/academy/${place.artKey}.webp`; photo.alt = ''; photo.loading = 'lazy';
+            const copy = mobileElement('div');
+            copy.append(mobileElement('span', 'academy-kicker', `${String(i + 1).padStart(2, '0')} / ${bm ? zones[i].chapterBm : zones[i].chapter}`), mobileElement('h3', '', bm ? place.locationBm : place.locationEn), mobileElement('p', '', place.guardian));
+            card.append(photo, copy); route.append(card);
         });
-
-        bg.on('pointerout', () => {
-            bg.setTexture('button');
-            this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 100 });
-            txt.setColor('#ffffff');
-        });
-
-        bg.on('pointerdown', () => {
-            audioManager.playClick();
-            this.tweens.add({ targets: btn, scaleX: 0.95, scaleY: 0.95, duration: 50, yoyo: true });
-            onClick();
-        });
-
-        return btn;
+        dialog.append(close, intro, mobileElement('h2', '', story.journey), route, mobileElement('p', 'academy-story-note', story.note));
+        dialog.addEventListener('close', () => dialog.remove(), { once: true });
+        document.body.append(dialog); this.academyDialog = dialog; dialog.showModal();
     }
 }

@@ -1,3 +1,4 @@
+import { placeOnTrack } from '../systems/TrackObject.js';
 import Phaser from 'phaser';
 
 const LANE_POSITIONS = [380, 640, 900];
@@ -29,10 +30,7 @@ export default class PowerUp extends Phaser.Physics.Arcade.Sprite {
     this.powerType = type;
     this.setTexture(textureMap[type] || 'powerup-shield');
 
-    const laneX = LANE_POSITIONS[laneIndex];
-    this.enableBody(true, laneX, -50, true, true);
-    this.body.setAllowGravity(false);
-    this.setVelocity(0, speed);
+    placeOnTrack(this, laneIndex, speed);
   }
 
   deactivate() {

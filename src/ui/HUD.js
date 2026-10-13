@@ -7,41 +7,41 @@ export default class HUD {
 
         // Left HUD Card (Distance & Shields)
         this.leftCard = scene.add.graphics().setScrollFactor(0);
-        this.leftCard.fillStyle(0x060c22, 0.75);
+        this.leftCard.fillStyle(0x193f6c, 0.75);
         this.leftCard.fillRoundedRect(16, 14, 210, 72, 8);
-        this.leftCard.lineStyle(2, 0x00f3ff, 0.8);
+        this.leftCard.lineStyle(2, 0xe7bf60, 0.8);
         this.leftCard.strokeRoundedRect(16, 14, 210, 72, 8);
 
         this.distanceText = scene.add.text(28, 22, 'DIST: 0m', {
-            fontSize: '18px', fontFamily: "'Orbitron', sans-serif", color: '#ffffff', fontStyle: 'bold'
+            fontSize: '18px', fontFamily: "'Segoe UI', sans-serif", color: '#ffffff', fontStyle: 'bold'
         }).setScrollFactor(0);
 
         this.shieldsText = scene.add.text(28, 50, 'SHIELDS: 0', {
-            fontSize: '16px', fontFamily: "'Rajdhani', sans-serif", color: '#00f3ff', fontStyle: 'bold'
+            fontSize: '16px', fontFamily: "'Segoe UI', sans-serif", color: '#e7bf60', fontStyle: 'bold'
         }).setScrollFactor(0);
 
         // Right HUD Card (Score & Coins)
         this.rightCard = scene.add.graphics().setScrollFactor(0);
-        this.rightCard.fillStyle(0x060c22, 0.75);
+        this.rightCard.fillStyle(0x193f6c, 0.75);
         this.rightCard.fillRoundedRect(width - 236, 14, 220, 72, 8);
-        this.rightCard.lineStyle(2, 0xff00a0, 0.8);
+        this.rightCard.lineStyle(2, 0xe7bf60, 0.8);
         this.rightCard.strokeRoundedRect(width - 236, 14, 220, 72, 8);
 
         this.scoreText = scene.add.text(width - 28, 22, 'SCORE: 0', {
-            fontSize: '18px', fontFamily: "'Orbitron', sans-serif", color: '#ffcc00', fontStyle: 'bold'
+            fontSize: '18px', fontFamily: "'Segoe UI', sans-serif", color: '#ffcc00', fontStyle: 'bold'
         }).setOrigin(1, 0).setScrollFactor(0);
 
         this.coinsText = scene.add.text(width - 28, 50, 'COINS: 0', {
-            fontSize: '16px', fontFamily: "'Rajdhani', sans-serif", color: '#00ff88', fontStyle: 'bold'
+            fontSize: '16px', fontFamily: "'Segoe UI', sans-serif", color: '#b9dbc8', fontStyle: 'bold'
         }).setOrigin(1, 0).setScrollFactor(0);
 
-        // Audio toggle button (cyber pill)
+        // Audio toggle button
         this.audioBtn = scene.add.text(width - 28, 96, audioManager.isMuted ? '🔇 MUTE' : '🔊 SFX', {
             fontSize: '14px',
-            fontFamily: "'Rajdhani', sans-serif",
+            fontFamily: "'Segoe UI', sans-serif",
             fontStyle: 'bold',
-            color: '#00ffff',
-            backgroundColor: '#0c1838',
+            color: '#b9d5e9',
+            backgroundColor: '#193f6c',
             padding: { x: 10, y: 5 }
         }).setOrigin(1, 0).setScrollFactor(0).setInteractive({ useHandCursor: true });
 
@@ -52,12 +52,12 @@ export default class HUD {
         });
 
         this.comboText = scene.add.text(width / 2, 40, '', {
-            fontSize: '32px', fontFamily: "'Orbitron', sans-serif", color: '#ffaa00', fontStyle: 'bold',
+            fontSize: '32px', fontFamily: "'Segoe UI', sans-serif", color: '#ffaa00', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setScrollFactor(0);
 
         this.zoneText = scene.add.text(24, height - 24, 'ZONE 01', {
-            fontSize: '18px', fontFamily: "'Orbitron', sans-serif", color: '#00ff88', fontStyle: 'bold',
+            fontSize: '18px', fontFamily: "'Segoe UI', sans-serif", color: '#b9dbc8', fontStyle: 'bold',
             stroke: '#050c1e', strokeThickness: 3
         }).setOrigin(0, 1).setScrollFactor(0);
 
@@ -65,12 +65,12 @@ export default class HUD {
         this.isSprintMode = false;
         this.progressLabel = 'SPM EXAM';
         this.sprintTimerText = scene.add.text(width / 2, 18, '', {
-            fontSize: '26px', fontFamily: "'Orbitron', sans-serif", color: '#00ffff', fontStyle: 'bold',
+            fontSize: '26px', fontFamily: "'Segoe UI', sans-serif", color: '#b9d5e9', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5, 0).setScrollFactor(0).setVisible(false);
 
         this.sprintProgressText = scene.add.text(width / 2, 54, '', {
-            fontSize: '18px', fontFamily: "'Rajdhani', sans-serif", color: '#ffd700', fontStyle: 'bold',
+            fontSize: '18px', fontFamily: "'Segoe UI', sans-serif", color: '#ffd700', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5, 0).setScrollFactor(0).setVisible(false);
 
@@ -116,7 +116,7 @@ export default class HUD {
         this.sprintTimerText.setText(formatted);
 
         if (secondsRemaining <= 30) {
-            this.sprintTimerText.setColor('#ff0044');
+            this.sprintTimerText.setColor('#c96851');
             // Periodic pulse when low on time
             const now = Date.now();
             if (now - this.lastWarningPulse > 1000) {
@@ -132,7 +132,7 @@ export default class HUD {
         } else if (secondsRemaining <= 60) {
             this.sprintTimerText.setColor('#ffcc00');
         } else {
-            this.sprintTimerText.setColor('#00ffff');
+            this.sprintTimerText.setColor('#b9d5e9');
         }
     }
 
@@ -173,13 +173,13 @@ export default class HUD {
     updateZone(zone, lang) {
         const title = lang === 'bm' ? zone.nameBm : zone.nameEn;
         this.zoneText.setText(`ZONE 0${zone.id} | ${title.toUpperCase()}`);
-        this.zoneText.setColor(zone.labelColor);
+        this.zoneText.setColor('#e7bf60');
     }
 
     showZoneBanner(zone, lang) {
         const title = lang === 'bm' ? zone.nameBm : zone.nameEn;
         const bannerText = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2 - 100, `ZONE 0${zone.id} — ${title.toUpperCase()}`, {
-            fontSize: '40px', fontFamily: "'Orbitron', sans-serif", color: zone.labelColor, fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
+            fontSize: '40px', fontFamily: "'Segoe UI', sans-serif", color: zone.labelColor, fontStyle: 'bold', stroke: '#000000', strokeThickness: 5
         }).setOrigin(0.5).setScrollFactor(0).setAlpha(0);
 
         this.scene.tweens.add({
@@ -194,7 +194,7 @@ export default class HUD {
 
     showFever() {
         const text = this.scene.add.text(this.scene.cameras.main.width / 2, 110, '⚡ MATH FEVER! ⚡', {
-            fontSize: '48px', fontFamily: "'Orbitron', sans-serif", color: '#ff0055', fontStyle: 'bold',
+            fontSize: '48px', fontFamily: "'Segoe UI', sans-serif", color: '#e7bf60', fontStyle: 'bold',
             stroke: '#ffffff', strokeThickness: 3
         }).setOrigin(0.5).setScrollFactor(0);
         
@@ -208,7 +208,7 @@ export default class HUD {
 
     showCorrect(points) {
         const text = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, `+${points}`, {
-            fontSize: '36px', fontFamily: "'Orbitron', sans-serif", color: '#00ff88', fontStyle: 'bold',
+            fontSize: '36px', fontFamily: "'Segoe UI', sans-serif", color: '#b9dbc8', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setScrollFactor(0);
 
@@ -222,7 +222,7 @@ export default class HUD {
 
     showWrong() {
         const text = this.scene.add.text(this.scene.cameras.main.width / 2, this.scene.cameras.main.height / 2, 'WRONG!', {
-            fontSize: '36px', fontFamily: "'Orbitron', sans-serif", color: '#ff0044', fontStyle: 'bold',
+            fontSize: '36px', fontFamily: "'Segoe UI', sans-serif", color: '#c96851', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
         }).setOrigin(0.5).setScrollFactor(0);
 

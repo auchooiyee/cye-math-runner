@@ -1,7 +1,7 @@
 {
   "name": "cye-math-runner",
   "version": "0.1.0",
-  "description": "CYE MATH RUNNER — SPM FINAL RUN: An endless runner with KSSM Form 5 Mathematics",
+  "description": "CYE MATH RUNNER \u2014 SPM FINAL RUN: An endless runner with KSSM Form 5 Mathematics",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "test:matrix": "node --test scripts/test-matrix-repair.js",
     "test:content": "node --test scripts/test-question-content.js",
     "test:leaderboard": "node --test scripts/test-leaderboard.js",
-    "test:nickname": "node --test scripts/test-player-name.js"
+    "test:nickname": "node --test scripts/test-player-name.js",
+    "test:track": "node --test scripts/test-track-geometry.js scripts/test-track-gate.js scripts/test-numeric-keypad.js"
   },
   "dependencies": {
     "phaser": "3.90.0"

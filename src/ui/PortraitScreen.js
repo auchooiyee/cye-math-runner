@@ -20,22 +20,21 @@ export default class PortraitScreen {
         this.subtitle = mobileElement('p', 'portrait-subtitle', subtitle);
         this.content = mobileElement('div', 'portrait-content');
         this.footer = mobileElement('div', 'portrait-footer');
-        this.root.append(this.heading, this.subtitle, this.content, this.footer);
+        const panel = mobileElement('div', 'academy-screen-panel');
+        const brand = mobileElement('div', 'academy-screen-brand', '♛  CYE ACADEMY');
+        panel.append(brand, this.heading, this.subtitle, this.content, this.footer);
+        this.root.append(panel);
         document.body.append(this.root);
-        // The DOM menu covers Phaser's canvas in portrait. Keep a tap from
-        // activating a canvas button underneath the selected DOM button.
-        const portraitQuery = window.matchMedia('(orientation: portrait) and (max-width: 900px)');
-        const syncCanvasInput = () => { scene.input.enabled = !portraitQuery.matches; };
-        syncCanvasInput();
-        portraitQuery.addEventListener('change', syncCanvasInput);
+        // One responsive DOM screen handles all viewport sizes.
+        scene.input.enabled = false;
         scene.events.once('shutdown', () => {
-            portraitQuery.removeEventListener('change', syncCanvasInput);
             scene.input.enabled = true;
             this.root.remove();
         });
     }
 
     setHeader(title, subtitle = '') {
+        this.root.setAttribute('aria-label', title);
         this.heading.textContent = title;
         this.subtitle.textContent = subtitle;
     }

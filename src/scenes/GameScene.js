@@ -47,12 +47,18 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#0a0a1a');
+    this.time.paused = false;
+    this.cameras.main.setBackgroundColor('#193f6c');
     document.body.classList.add('portrait-running');
     this.scale.getParentBounds();
     this.scale.refresh();
     this.events.once('shutdown', () => {
       this.portraitUI?.destroy();
+      // Scene instances are reused by Play Again; custom listeners are not.
+      for (const event of ['zone-changed', EVENTS.SHIELD_CHANGED, EVENTS.MATH_FEVER,
+        EVENTS.POWERUP_ACTIVATED, EVENTS.POWERUP_EXPIRED, 'boss-defeated', 'boss-failed']) {
+        this.events.removeAllListeners(event);
+      }
       document.body.classList.remove('portrait-running');
       this.scale.getParentBounds();
       this.scale.refresh();
@@ -111,14 +117,8 @@ export default class GameScene extends Phaser.Scene {
     // Player stands on ground
     this.physics.add.collider(this.player, this.runnerSystem.groundPhysics);
 
-    // Player vs obstacles — overlap detection
-    this.physics.add.overlap(this.player, this.obstacleGroup, this.hitObstacle, null, this);
-
-    // Player vs coins
-    this.physics.add.overlap(this.player, this.coinGroup, this.collectCoin, null, this);
-
-    // Player vs power-ups
-    this.physics.add.overlap(this.player, this.powerUpGroup, this.collectPowerUp, null, this);
+    // Track objects resolve contact by world distance in SpawnSystem.
+    // Their projected screen positions must never trigger early 2D overlaps.
 
     // ── UI ──
     this.hud = new HUD(this);
@@ -169,13 +169,14 @@ export default class GameScene extends Phaser.Scene {
       onLane: lane => { if (!this.isPaused) this.player.moveToLane(lane); },
       onQuit: () => this.handleGameOver('RUN ABORTED')
     });
-    this.events.on('mathgate-activated', ({ question, options }) => {
-      this.portraitUI.showGate(question, options, this.player.currentLane);
+    const onQuestion = question => this.beginQuestion(question);
+    const onSubmission = result => this.resolveQuestion(result);
+    this.events.on('mathgate-activated', onQuestion);
+    this.events.on('mathgate-submitted', onSubmission);
+    this.events.once('shutdown', () => {
+      this.events.off('mathgate-activated', onQuestion);
+      this.events.off('mathgate-submitted', onSubmission);
     });
-    this.events.on('mathgate-deactivated', () => this.portraitUI.hideGate());
-
-    // ── Pause overlay ──
-    this.createPauseOverlay();
 
     // ── Event listeners ──
     this.events.on(EVENTS.SHIELD_CHANGED, (shields) => {
@@ -229,13 +230,6 @@ export default class GameScene extends Phaser.Scene {
       this.resumeFromBoss();
     });
 
-    // Math Gate descent event (resumes calm background scroll after auto pause)
-    this.events.on('mathgate-start-descending', () => {
-      if (this.isRunning && !this.isPaused) {
-        this.runnerSystem.setSpeedMultiplier(0.35);
-      }
-    });
-
     // Start background synthwave music
     audioManager.startBGM(125, 'Am');
 
@@ -254,8 +248,7 @@ export default class GameScene extends Phaser.Scene {
     // Initial Zone
     const lang = localStorage.getItem('CYE_MATH_RUNNER_LANGUAGE') || 'en';
     const initialZone = this.zoneSystem.getCurrentZone();
-    this.hud.zoneText.setText(`ZONE 0${initialZone.id} | ${(lang === 'bm' ? initialZone.nameBm : initialZone.nameEn).toUpperCase()}`);
-    this.hud.zoneText.setColor(initialZone.labelColor);
+    this.hud.updateZone(initialZone, lang);
     
     // Initial color
     this.cameras.main.setBackgroundColor(initialZone.bgColor);
@@ -263,7 +256,13 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (!this.isRunning || this.isPaused) return;
+    if (!this.isRunning) return;
+    if (this.mathGate.active) {
+      this.mathGate.update();
+      if (!this.mathGate.checked) this.mathGateUI.updateTimer(this.mathGate.getRemaining());
+      return;
+    }
+    if (this.isPaused) return;
 
     // Input
     this.inputManager.update();
@@ -295,13 +294,12 @@ export default class GameScene extends Phaser.Scene {
       this.portraitUI.updateHud({
         distance, shields: this.player.shields, score: this.scoreSystem.getDisplayScore(), progress
       });
-      if (this.mathGate.active) this.portraitUI.updateGate(this.mathGate.isCalculationPaused, this.player.currentLane);
     }
 
     // ── Sprint Mode Countdown Timer ──
     if (this.mode === 'sprint') {
       // Pause sprint timer while calculation auto-pause is active
-      if (!this.mathGate || !this.mathGate.isCalculationPaused) {
+      if (!this.mathGate.active) {
         this.sprintTimeRemaining -= (delta / 1000);
         this.hud.updateSprintTimer(this.sprintTimeRemaining);
 
@@ -310,61 +308,6 @@ export default class GameScene extends Phaser.Scene {
           this.handleSprintFinish("TIME'S UP!");
           return;
         }
-      }
-    }
-
-    // ── Math Gate check ──
-    if (this.mathGate && this.mathGate.isAtPlayerLevel()) {
-      this.mathGate.checked = true;
-      const result = this.mathGate.checkAnswer(this.player.currentLane);
-      const answerResult = this.questionSystem.validateAnswer(
-        this.mathGate.currentQuestion.id,
-        result.selectedAnswerIndex
-      );
-
-      if (answerResult.correct) {
-        audioManager.playCorrect();
-        this.sparkEmitter.setParticleTint(0x00ff88);
-        this.sparkEmitter.explode(18, this.player.x, this.player.y);
-        this.comboSystem.increment();
-        const points = this.mathGate.currentQuestion.points || 100;
-        const earned = this.scoreSystem.addCorrectAnswer(points, this.comboSystem.getMultiplier());
-        this.difficultySystem.recordAnswer(true);
-        this.hud.showCorrect(earned);
-        this.mathGate.showResult(true);
-      } else {
-        audioManager.playWrong();
-        this.cameras.main.shake(200, 0.015);
-        this.sparkEmitter.setParticleTint(0xff0044);
-        this.sparkEmitter.explode(12, this.player.x, this.player.y);
-        this.comboSystem.reset();
-        this.scoreSystem.addWrongAnswer(-50);
-        this.difficultySystem.recordAnswer(false);
-        this.hud.showWrong();
-        this.mathGate.showResult(false);
-      }
-
-      this.hud.updateCombo(this.comboSystem.getCurrentCombo(), this.comboSystem.getMultiplier());
-      this.recordQuestionProgress();
-
-      if (answerResult.correct) {
-        this.time.delayedCall(700, () => this.finishGateFeedback());
-      } else {
-        this.pauseForAnswerFeedback();
-        const portraitFeedback = this.portraitUI.isActive();
-        let feedbackHandled = false;
-        const continueAfterFeedback = () => {
-          if (feedbackHandled) return;
-          feedbackHandled = true;
-          this.mathGateUI.hideFeedback();
-          this.portraitUI.hideModal();
-          if (this.mode !== 'practice') {
-            this.player.takeDamage();
-          }
-          this.finishGateFeedback();
-        };
-        this.portraitUI.showWrongFeedback(answerResult, continueAfterFeedback, portraitFeedback);
-        if (!portraitFeedback) this.mathGateUI.showWrongAnswer(answerResult, continueAfterFeedback);
       }
     }
 
@@ -377,8 +320,8 @@ export default class GameScene extends Phaser.Scene {
         : (this.mode === 'practice' ? this.practiceChapter : this.zoneSystem.getCurrentChapter());
       const question = this.questionSystem.getRandomQuestion(chapter, range.min, range.max, this.practiceTopic);
       if (question) {
-        this.runnerSystem.setSpeedMultiplier(0); // Auto pause runner when question appears
         this.spawnSystem.spawnMathGate(question, speed);
+        return;
       }
     }
 
@@ -386,18 +329,6 @@ export default class GameScene extends Phaser.Scene {
     if (this.mode !== 'practice' && this.spawnSystem.shouldTriggerBoss(distance)) {
       this.spawnSystem.markBossTriggered();
       this.triggerBoss();
-    }
-
-    // ── Coin magnet effect ──
-    if (this.powerUpSystem.isActive('coin_magnet')) {
-      this.coinGroup.getChildren().forEach(coin => {
-        if (coin.active) {
-          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, coin.x, coin.y);
-          if (dist < 250) {
-            this.physics.moveToObject(coin, this.player, 500);
-          }
-        }
-      });
     }
 
     // ── Game over check ──
@@ -412,14 +343,47 @@ export default class GameScene extends Phaser.Scene {
     this.hud.updateSprintProgress(this.sprintQuestionsCompleted, this.targetQuestions);
   }
 
-  pauseForAnswerFeedback() {
+  beginQuestion(question) {
     this.isPaused = true;
     this.physics.pause();
     this.runnerSystem.pause();
     this.inputManager.disable();
+    this.tweens.pauseAll();
+    this.time.paused = true;
+    this.mathGateUI.showQuestion(question, answer => this.mathGate.submit(answer), {
+      onExtend: () => this.mathGate.extendTime(),
+      onReview: () => this.mathGate.submit(null),
+      getTotalTime: () => this.mathGate.totalTime
+    });
+  }
+
+  resolveQuestion({ answer, timedOut }) {
+    const result = this.questionSystem.validateAnswer(this.mathGate.currentQuestion.id, answer);
+    if (result.correct) {
+      audioManager.playCorrect();
+      this.comboSystem.increment();
+      this.scoreSystem.addCorrectAnswer(this.mathGate.currentQuestion.points || 100, this.comboSystem.getMultiplier());
+    } else {
+      audioManager.playWrong();
+      this.comboSystem.reset();
+      this.scoreSystem.addWrongAnswer(-50);
+    }
+    this.difficultySystem.recordAnswer(result.correct);
+    this.hud.updateCombo(this.comboSystem.getCurrentCombo(), this.comboSystem.getMultiplier());
+    this.recordQuestionProgress();
+    this.mathGateUI.showResult(result, () => {
+      // Resume scene timers before damage/results callbacks schedule transitions.
+      this.time.paused = false;
+      this.tweens.resumeAll();
+      if (!result.correct && this.mode !== 'practice') this.player.takeDamage();
+      this.finishGateFeedback();
+    }, { timedOut });
   }
 
   finishGateFeedback() {
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    this.mathGateUI.hideFeedback();
     this.portraitUI.hideModal();
     this.portraitUI.hideGate();
     this.mathGate.deactivate();
@@ -462,19 +426,19 @@ export default class GameScene extends Phaser.Scene {
   }
 
   showZoneTransition(zone, lang) {
-    const title = lang === 'bm' ? zone.nameBm : zone.nameEn;
+    const title = lang === 'bm' ? zone.locationBm : zone.locationEn;
     const banner = this.add.container(640, 350).setDepth(180).setScrollFactor(0).setAlpha(0).setScale(0.82);
-    const glow = this.add.rectangle(0, 0, 720, 150, 0x030614, 0.92)
+    const glow = this.add.rectangle(0, 0, 720, 150, 0x193f6c, 0.92)
       .setStrokeStyle(3, zone.accentHex, 1);
-    const chapter = this.add.text(0, -34, `ENTERING CHAPTER ${zone.chapter}`, {
-      fontSize: '17px', fontFamily: "'Orbitron', sans-serif", color: zone.labelColor, fontStyle: 'bold'
+    const chapter = this.add.text(0, -34, `CHAPTER ${zone.chapter} • ${lang === 'bm' ? zone.nameBm : zone.nameEn}`, {
+      fontSize: '17px', fontFamily: "'Segoe UI', sans-serif", color: '#e7bf60', fontStyle: 'bold'
     }).setOrigin(0.5);
     const name = this.add.text(0, 18, title.toUpperCase(), {
-      fontSize: '39px', fontFamily: "'Orbitron', sans-serif", color: '#ffffff', fontStyle: 'bold',
-      stroke: zone.labelColor, strokeThickness: 2
+      fontSize: '39px', fontFamily: "'Segoe UI', sans-serif", color: '#ffffff', fontStyle: 'bold',
+      stroke: '#193f6c', strokeThickness: 2
     }).setOrigin(0.5);
     const motif = this.add.text(0, 58, zone.motifs.join('  •  '), {
-      fontSize: '16px', fontFamily: "'Fira Code', monospace", color: zone.labelColor
+      fontSize: '16px', fontFamily: "'Fira Code', monospace", color: '#e7bf60'
     }).setOrigin(0.5);
     banner.add([glow, chapter, name, motif]);
     this.tweens.add({
@@ -520,85 +484,18 @@ export default class GameScene extends Phaser.Scene {
 
   // ── Pause ──
 
-  createPauseOverlay() {
-    const w = 1280;
-    const h = 720;
-    this.pauseOverlay = this.add.container(0, 0).setDepth(100).setVisible(false).setScrollFactor(0);
-
-    const bgDim = this.add.rectangle(w / 2, h / 2, w, h, 0x030614, 0.85);
-
-    // Cyber Modal Card
-    const modalBg = this.add.rectangle(w / 2, h / 2, 480, 360, 0x08122c, 0.95);
-    modalBg.setStrokeStyle(3, 0x00f3ff, 0.9);
-
-    const title = this.add.text(w / 2, h / 2 - 110, 'SYSTEM PAUSED', {
-      fontSize: '34px', fontFamily: "'Orbitron', sans-serif", color: '#ffffff', fontStyle: 'bold',
-      stroke: '#00f3ff', strokeThickness: 1
-    }).setOrigin(0.5);
-
-    const sub = this.add.text(w / 2, h / 2 - 70, 'CALCULATOR STANDBY', {
-      fontSize: '14px', fontFamily: "'Rajdhani', sans-serif", color: '#00ff88', fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    // Resume button
-    const resumeBtn = this.add.container(w / 2, h / 2 + 10);
-    const resumeBg = this.add.image(0, 0, 'button').setInteractive({ useHandCursor: true });
-    const resumeTxt = this.add.text(0, 0, '▶ RESUME RUN', {
-      fontSize: '20px', fontFamily: "'Orbitron', sans-serif", color: '#00ffff', fontStyle: 'bold'
-    }).setOrigin(0.5);
-    resumeBtn.add([resumeBg, resumeTxt]);
-
-    resumeBg.on('pointerover', () => {
-      resumeBg.setTexture('button-hover');
-      this.tweens.add({ targets: resumeBtn, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-    });
-    resumeBg.on('pointerout', () => {
-      resumeBg.setTexture('button');
-      this.tweens.add({ targets: resumeBtn, scaleX: 1, scaleY: 1, duration: 100 });
-    });
-    resumeBg.on('pointerdown', () => {
-      audioManager.playClick();
-      this.togglePause();
-    });
-
-    // Quit button
-    const quitBtn = this.add.container(w / 2, h / 2 + 85);
-    const quitBg = this.add.image(0, 0, 'button').setInteractive({ useHandCursor: true });
-    const quitTxt = this.add.text(0, 0, '✕ ABORT RUN', {
-      fontSize: '20px', fontFamily: "'Orbitron', sans-serif", color: '#ff0055', fontStyle: 'bold'
-    }).setOrigin(0.5);
-    quitBtn.add([quitBg, quitTxt]);
-
-    quitBg.on('pointerover', () => {
-      quitBg.setTexture('button-hover');
-      this.tweens.add({ targets: quitBtn, scaleX: 1.05, scaleY: 1.05, duration: 100 });
-    });
-    quitBg.on('pointerout', () => {
-      quitBg.setTexture('button');
-      this.tweens.add({ targets: quitBtn, scaleX: 1, scaleY: 1, duration: 100 });
-    });
-    quitBg.on('pointerdown', () => {
-      audioManager.playClick();
-      this.handleGameOver();
-    });
-
-    this.pauseOverlay.add([bgDim, modalBg, title, sub, resumeBtn, quitBtn]);
-  }
-
   togglePause() {
-    if (!this.isRunning || (this.isPaused && !this.manualPause)) return;
+    if (this.mathGate.active || !this.isRunning || (this.isPaused && !this.manualPause)) return;
     this.manualPause = !this.manualPause;
     this.isPaused = this.manualPause;
     if (this.manualPause) {
       this.physics.pause();
       this.runnerSystem.pause();
-      this.pauseOverlay.setVisible(true);
-      this.portraitUI.showPause(this.portraitUI.isActive());
+      this.portraitUI.showPause(true);
       audioManager.stopBGM();
     } else {
       this.physics.resume();
       this.runnerSystem.resume();
-      this.pauseOverlay.setVisible(false);
       this.portraitUI.hideModal();
       audioManager.startBGM(125);
     }
@@ -607,6 +504,8 @@ export default class GameScene extends Phaser.Scene {
   // ── Boss ──
 
   triggerBoss() {
+    this.tweens.pauseAll();
+    this.time.paused = true;
     this.runnerSystem.pause();
     this.physics.pause();
     this.isPaused = true;
@@ -624,6 +523,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   resumeFromBoss() {
+    this.tweens.resumeAll();
+    this.time.paused = false;
     this.runnerSystem.resume();
     this.physics.resume();
     this.isPaused = false;
@@ -640,7 +541,7 @@ export default class GameScene extends Phaser.Scene {
     audioManager.stopBGM();
 
     const banner = this.add.text(640, 360, reasonText, {
-      fontSize: '64px', fontFamily: "'Orbitron', sans-serif", color: '#ffd700', fontStyle: 'bold',
+      fontSize: '64px', fontFamily: "'Segoe UI', sans-serif", color: '#ffd700', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6
     }).setOrigin(0.5).setDepth(200).setScrollFactor(0);
 
@@ -662,7 +563,7 @@ export default class GameScene extends Phaser.Scene {
     audioManager.playGameOver();
 
     const gameOverText = this.add.text(640, 360, reason === 'RUN ABORTED' ? 'RUN ENDED' : 'GAME OVER', {
-      fontSize: '68px', fontFamily: "'Orbitron', sans-serif", color: '#ff0044', fontStyle: 'bold',
+      fontSize: '68px', fontFamily: "'Segoe UI', sans-serif", color: '#c96851', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6
     }).setOrigin(0.5).setDepth(200).setScrollFactor(0);
 

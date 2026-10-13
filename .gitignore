@@ -15,6 +15,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Deployment CLI state and local databases
+.netlify/
+.wrangler/
+.dev.vars
+
 # Editor directories and files
 .vscode/
 .idea/

@@ -100,14 +100,14 @@ export default class InputManager {
         .setDepth(45)
         .setScrollFactor(0)
         .setAlpha(0.68);
-      const background = this.scene.add.circle(0, 0, 39, 0x06152f, 0.9)
-        .setStrokeStyle(3, 0x00f3ff, 0.9)
+      const background = this.scene.add.circle(0, 0, 39, 0x193f6c, 0.9)
+        .setStrokeStyle(3, 0xe7bf60, 0.9)
         .setInteractive({ useHandCursor: true });
       const symbol = this.scene.add.text(0, -7, control.symbol, {
         fontSize: '28px', fontFamily: "'Arial', sans-serif", color: '#ffffff', fontStyle: 'bold'
       }).setOrigin(0.5);
       const label = this.scene.add.text(0, 22, control.label, {
-        fontSize: '9px', fontFamily: "'Orbitron', sans-serif", color: '#00ffff', fontStyle: 'bold'
+        fontSize: '9px', fontFamily: "'Segoe UI', sans-serif", color: '#b9d5e9', fontStyle: 'bold'
       }).setOrigin(0.5);
 
       const press = () => {

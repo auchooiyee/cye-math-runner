@@ -1,3 +1,5 @@
+import { ACADEMY_LOCATIONS } from '../config/academy.js';
+
 // Zone definitions — one per Form 5 chapter
 const ZONE_DATA = [
   { id: 1, chapter: 1, key: 'variation',      nameBm: 'Ubahan',            nameEn: 'Variation',      endDistance: 3000,  bgColor: '#0a1628', accentHex: 0x00ff88, tintHex: 0xb8ffda, labelColor: '#00ff88', motifs: ['y = kx', '∝', 'k / x'] },
@@ -14,7 +16,7 @@ export default class ZoneSystem {
   constructor(scene) {
     this.scene = scene;
     this.currentZoneIndex = 0;  // 0-indexed
-    this.zones = ZONE_DATA;
+    this.zones = ZONE_DATA.map((zone, index) => ({ ...zone, ...ACADEMY_LOCATIONS[index] }));
     this.hasJustChanged = false;
     this.lockedChapter = null;
   }

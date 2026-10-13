@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+# Keep the leaderboard API ahead of the game fallback.
+[[redirects]]
+  from = "/api/*"
+  to = "https://cye-math-runner-api.a-chooiyee.workers.dev/api/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

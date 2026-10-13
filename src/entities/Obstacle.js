@@ -1,3 +1,4 @@
+import { placeOnTrack } from '../systems/TrackObject.js';
 import Phaser from 'phaser';
 
 const LANE_POSITIONS = [380, 640, 900];
@@ -39,38 +40,8 @@ export default class Obstacle extends Phaser.Physics.Arcade.Sprite {
     const textureKey = type === 'high' ? 'obstacle-high' : 'obstacle-low';
     this.setTexture(textureKey);
 
-    const laneX = LANE_POSITIONS[laneIndex];
-    // 'low' obstacles sit on the ground — player must jump
-    // 'high' obstacles float at head height — player must slide
-    const yPos = type === 'high' ? GROUND_Y - 55 : GROUND_Y - 20;
-
-    this.enableBody(true, laneX, -50, true, true);
-    this.setPosition(laneX, -50);
-    this.body.setSize(50, 40);
-    this.body.setAllowGravity(false);
-    this.body.setImmovable(true);
-    this.body.setSize(44, 32);
-    this.setVelocity(0, speed);
-    this.lane = laneIndex;
-    this.targetY = yPos;
-
-    this.warning.setPosition(laneX, 184).setVisible(true).setAlpha(1);
+    placeOnTrack(this, laneIndex, speed);
     this.warning.warningLabel.setText(type === 'high' ? 'SLIDE' : 'JUMP');
-    this.warningTween?.stop();
-    this.warningTween = this.scene.tweens.add({
-      targets: this.warning,
-      alpha: 0.45,
-      duration: 320,
-      yoyo: true,
-      repeat: -1
-    });
-  }
-
-  preUpdate(time, delta) {
-    super.preUpdate(time, delta);
-    if (this.warning.visible && this.y >= 225) {
-      this.hideWarning();
-    }
   }
 
   hideWarning() {

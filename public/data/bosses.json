@@ -1,82 +1,82 @@
 [
   {
     "id": "boss-01",
-    "name": "Variation Viper",
+    "name": "Ratio Guide",
     "zone": 1,
     "hp": 100,
     "questionsToDefeat": 5,
     "reward": 500,
-    "color": "#00ff88",
-    "description": "Master of proportions and constants"
+    "color": "#68cfff",
+    "description": "Explore how changing one quantity changes another."
   },
   {
     "id": "boss-02",
-    "name": "Matrix Master",
+    "name": "Matrix Navigator",
     "zone": 2,
     "hp": 120,
     "questionsToDefeat": 5,
     "reward": 600,
-    "color": "#00ffff",
-    "description": "Rows and columns are under his control"
+    "color": "#79e0ff",
+    "description": "Organise the city routes with rows and columns."
   },
   {
     "id": "boss-03",
-    "name": "Insurance Inspector",
+    "name": "Shield Keeper",
     "zone": 3,
     "hp": 140,
     "questionsToDefeat": 6,
     "reward": 700,
-    "color": "#ff8800",
-    "description": "Premiums and deductibles are his weapons"
+    "color": "#9fdeb1",
+    "description": "Practise protecting people against uncertain events."
   },
   {
     "id": "boss-04",
-    "name": "Tax Titan",
+    "name": "Civic Steward",
     "zone": 4,
     "hp": 160,
     "questionsToDefeat": 6,
     "reward": 800,
-    "color": "#ffd700",
-    "description": "Deductions and rebates cannot save you"
+    "color": "#ffdb75",
+    "description": "Explore how taxation supports a shared city."
   },
   {
     "id": "boss-05",
-    "name": "Geometry Ghost",
+    "name": "Prism Architect",
     "zone": 5,
     "hp": 180,
     "questionsToDefeat": 7,
     "reward": 900,
-    "color": "#ff00ff",
-    "description": "Translations and rotations confuse the mind"
+    "color": "#cfb5ff",
+    "description": "Explore movement, reflection and scale."
   },
   {
     "id": "boss-06",
-    "name": "Sine Serpent",
+    "name": "Wave Conductor",
     "zone": 6,
     "hp": 200,
     "questionsToDefeat": 7,
     "reward": 1000,
-    "color": "#0088ff",
-    "description": "Riding the waves of amplitude and period"
+    "color": "#7fdcf1",
+    "description": "Recognise repeating patterns in trigonometric graphs."
   },
   {
     "id": "boss-07",
-    "name": "Data Daemon",
+    "name": "Data Curator",
     "zone": 7,
     "hp": 220,
     "questionsToDefeat": 8,
     "reward": 1100,
-    "color": "#88ff00",
-    "description": "Standard deviations away from normal"
+    "color": "#dab9ff",
+    "description": "Compare the spread of data, not just its centre."
   },
   {
     "id": "boss-08",
-    "name": "Modelling Mastermind",
+    "name": "Crown Mentor",
     "zone": 8,
     "hp": 250,
     "questionsToDefeat": 8,
     "reward": 1500,
-    "color": "#ff0000",
-    "description": "The ultimate challenge of SPM Mathematics"
+    "color": "#ffdb75",
+    "description": "Build and check models of real situations."
   }
 ]

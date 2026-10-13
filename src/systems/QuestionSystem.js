@@ -83,7 +83,7 @@ export default class QuestionSystem {
     const q = this.questions.find(x => x.id === questionId);
     if (!q) return { correct: false };
     const isRepair = q.type === 'matrixRepair';
-    const selectedAnswer = isRepair ? String(answerIndex).trim() : (q.options[answerIndex] || 'No answer');
+    const selectedAnswer = answerIndex == null ? 'No answer' : isRepair ? String(answerIndex).trim() : (q.options[answerIndex] || 'No answer');
     const correctAnswer = isRepair ? String(q.answerValue) : q.options[q.answer];
     const correct = isRepair ? selectedAnswer === correctAnswer : answerIndex === q.answer;
     
